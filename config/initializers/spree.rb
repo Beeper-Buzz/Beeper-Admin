@@ -10,9 +10,6 @@
 # In order to initialize a setting do:
 # config.setting_name = 'new value'
 Spree.config do |config|
-  # Example:
-  # Uncomment to stop tracking inventory levels in the application
-  # config.track_inventory_levels = false
 end
 
 # Configure Spree Dependencies
@@ -21,10 +18,6 @@ end
 #       Just removing an entry from this initializer will make the dependency value go away.
 #
 Spree.dependencies do |dependencies|
-  # Example:
-  # Uncomment to change the default Service handling adding Items to Cart
-  # dependencies.cart_add_item_service = 'MyNewAwesomeService'
 end
 
-
-Spree.user_class = "Spree::User"
+Spree.user_class = 'Spree::User'
