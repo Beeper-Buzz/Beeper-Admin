@@ -20,6 +20,10 @@
 /node_modules
 /yarn-error.log
 
+.env
+.env.development
+.env.test
+
 /public/assets
 .byebug_history
 
