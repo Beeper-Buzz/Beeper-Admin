@@ -10,6 +10,9 @@
 # In order to initialize a setting do:
 # config.setting_name = 'new value'
 Spree.config do |config|
+	config.logo = ENV['COMPANY_LOGO']
+	config.admin_interface_logo = ENV['COMPANY_LOGO']
+	config.admin_show_version = ENV['COMPANY_LOGO']
 end
 
 # Configure Spree Dependencies
@@ -21,3 +24,4 @@ Spree.dependencies do |dependencies|
 end
 
 Spree.user_class = 'Spree::User'
+
