@@ -5,10 +5,10 @@
 if defined?(Rails::Console)
 	# this runs only in rails console
 
-	C = Chat
-	P = Pusher
-	U = User
-	W = Websocket
+	# C = Chat
+	# P = Pusher
+	# U = User
+	# W = Websocket
 
 
 	class Object
