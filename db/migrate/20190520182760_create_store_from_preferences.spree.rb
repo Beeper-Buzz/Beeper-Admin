@@ -28,7 +28,7 @@ class CreateStoreFromPreferences < ActiveRecord::Migration[4.2]
             Spree::Store.new do |s|
                 s.name =
                     preference_store.get 'spree/app_configuration/site_name' do
-                        'Spree Demo Site'
+                        'DNA Admin'
                     end
                 s.url =
                     preference_store.get 'spree/app_configuration/site_url' do
