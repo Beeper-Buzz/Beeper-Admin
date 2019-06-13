@@ -1,9 +1,24 @@
-# README
+# Material Instinct LLC - DNA Boilerplate for Admin UI
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Running the app locally (w/o Docker):
 
-Things you may want to cover:
+Requirements: ruby 2.6.2, rails 5.2.2, Postgres
+
+1. Clone this repo
+1. Copy `.env.example` to `.env.development`
+1. Copy app secrets from shared Dashlane.app secure note into `.env.development`
+1. Create a local postgres database
+1. Grant all privileges to the database
+1. Make sure the database creds match those in `.env.development`
+1. Run `bundle install`
+1. Run `rails g spree:install --user_class=Spree::User`
+1. Run `rails g spree:auth:install`
+1. Run `rails g spree_gateway:install`
+1. Run `rails s`
+
+---
+
+Other things we may need to cover:
 
 * Ruby version
 
