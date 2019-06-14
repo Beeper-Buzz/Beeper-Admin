@@ -7,6 +7,25 @@ Rails.application.routes.draw do
     #
     # We ask that you don't use the :as option here, as Spree relies on it being
     # the default of "spree".
-    mount Spree::Core::Engine, at: '/'
     # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
+end
+
+Spree::Core::Engine.add_routes do
+  namespace :admin, path: Spree.admin_path do
+    resources :messages, only: [:index] do
+      resources :message_support, only: [:index]
+    end 
+
+    get "/messages" => "messages#index"
+    get "/messages/support" => "messages#message_support"
+
+    # kludge
+    get "/messages/one" => "messages#thread_list_one"
+    get "/messages/two" => "messages#thread_list_two"
+  end
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v1 do
+      resources :messages, only: [:index]
+    end
+  end
 end
