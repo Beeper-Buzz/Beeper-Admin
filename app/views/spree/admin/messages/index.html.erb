@@ -10,7 +10,7 @@
   <div>
     <table class="table">
       <thead>
-        <p><%=@msgs%></p>
+        <%# conversation list by user %>
         <th>Avatar</th>
         <th>Name</th>
         <th>Last Msg</th>
@@ -20,15 +20,13 @@
           <%= render 'conversation' %>
           <%= render 'conversation' %>
           <%= render 'conversation' %>
-          <%= render 'conversation' %>
+        <%= render 'conversation' %>
       </tbody>
     </table>
   </div>
 
-  <div>
-  <%# thread list %>
-  All threads
-  
+  <div class="admin-thread-list">
+    <%# thread list (chatbubbles) %>
+    <%= render "thread", user: "STEVE" %>
   </div>
-
-</div>``
+</div>
