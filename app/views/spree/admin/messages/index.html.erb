@@ -1,0 +1,32 @@
+<% content_for :page_title do %>
+  
+<% end %>
+
+
+<h2>Messages</h2>
+
+
+<div class="admin-msgs-gridcontainer">
+  <div>
+    <table class="table">
+      <thead>
+        <%# conversation list by user %>
+        <th>Avatar</th>
+        <th>Name</th>
+        <th>Last Msg</th>
+        <th>Status</th>
+      </thead>
+      <tbody>
+          <%= render 'conversation' %>
+          <%= render 'conversation' %>
+          <%= render 'conversation' %>
+        <%= render 'conversation' %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-thread-list">
+    <%# thread list (chatbubbles) %>
+    <%= render "thread", user: "STEVE" %>
+  </div>
+</div>
