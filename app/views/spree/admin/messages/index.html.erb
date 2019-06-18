@@ -1,0 +1,60 @@
+<% content_for :page_title do %>
+  
+<% end %>
+
+
+<div class="admin-msgs-header">
+  <h2>Messages</h2>
+  <input class="admin-msgs-searchinput" type="text" placeholder="Search">
+</div>
+
+<div class="admin-msgs-gridcontainer">
+  <%# first col %>
+  <div>
+
+
+
+    <div class="admin-tableContainer">
+      <table class="table">
+        <thead class="admin-convolist-thead">
+          <%# conversation list by user %>
+          <th id="th-avatar">Avatar</th>
+          <th id="th-name">Name</th>
+          <th id="th-time">Time</th>
+          <th id="th-status">Status</th>
+        </thead>
+        <tbody class="admin-convolist-tbody">
+            <%= render 'conversation', username: "Andrew Matherson", msg: "Missing package" %>
+            <%= render 'conversation', username: "Marty Feldman", msg: "Still waiting" %>
+            <%= render 'conversation', username: "Theodore Roosevelt", msg: "Shipping options" %>
+            <%= render 'conversation', username: "Alan Cummings", msg: "Please change my order..." %>
+            <%= render 'conversation', username: "John C. Reiley", msg: "Thank you!" %>
+            <%= render 'conversation', username: "Jim Stanwick", msg: "Hello" %>
+            <%= render 'conversation', username: "Jenny McCarthy", msg: "Where is my ord..." %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <%# second col %>
+  <div class="admin-thread-list">
+    <div class="admin-top-controls">
+      <div>
+        <button></button>
+        <span>Create Support Ticket</span>
+      </div>
+    </div>
+
+    <%# thread list (chatbubbles) %>
+    <%= render "thread", user: "STEVE" %>
+    <div class="admin-thread-inputpanel">
+        <div class="admin-thread-userinput-wrapper">
+            <input class="admin-thread-userinput" type="text" placeholder="Type to chat">
+            <button></button>
+            <button></button>
+        </div>
+    </div>
+  </div>
+  
+</div>
