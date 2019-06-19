@@ -1,5 +1,5 @@
 <% content_for :page_title do %>
-  
+
 <% end %>
 
 
@@ -24,13 +24,11 @@
           <th id="th-status">Status</th>
         </thead>
         <tbody class="admin-convolist-tbody">
-            <%= render 'conversation', username: "Andrew Matherson", msg: "Missing package" %>
-            <%= render 'conversation', username: "Marty Feldman", msg: "Still waiting" %>
-            <%= render 'conversation', username: "Theodore Roosevelt", msg: "Shipping options" %>
-            <%= render 'conversation', username: "Alan Cummings", msg: "Please change my order..." %>
-            <%= render 'conversation', username: "John C. Reiley", msg: "Thank you!" %>
-            <%= render 'conversation', username: "Jim Stanwick", msg: "Hello" %>
-            <%= render 'conversation', username: "Jenny McCarthy", msg: "Where is my ord..." %>
+            <% @messages.each do |me| %>
+
+               <%= render 'conversation', message: me %>
+
+            <% end %>
         </tbody>
       </table>
     </div>
@@ -47,14 +45,9 @@
     </div>
 
     <%# thread list (chatbubbles) %>
-    <%= render "thread", user: "STEVE" %>
-    <div class="admin-thread-inputpanel">
-        <div class="admin-thread-userinput-wrapper">
-            <input class="admin-thread-userinput" type="text" placeholder="Type to chat">
-            <button></button>
-            <button></button>
-        </div>
-    </div>
+    <%= render "thread", chat_msgs: @chat_messages %>
+
+
   </div>
-  
+
 </div>
