@@ -2,7 +2,7 @@
 #### THIS initializer MUST BE LAST
 
 
-if defined?(Rails::Console)
+# if defined?(Rails::Console)
 	# this runs only in rails console
 
 	# C = Chat
@@ -33,5 +33,5 @@ if defined?(Rails::Console)
 	    end
 	end
 
-end
+# end
 
