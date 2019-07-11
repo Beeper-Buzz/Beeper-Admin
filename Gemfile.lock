@@ -1,3 +1,11 @@
+GIT
+  remote: https://github.com/spree-contrib/spree_static_content.git
+  revision: 017b411b6d16964f84de519c9fa3e9f0b4a219b6
+  specs:
+    spree_static_content (3.4.0)
+      spree_core (>= 3.1.0, < 5.0)
+      spree_extension
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -147,6 +155,9 @@ GEM
       activesupport (>= 4.2)
     ffaker (2.11.0)
     ffi (1.11.1)
+    ffi (1.11.1-java)
+    ffi (1.11.1-x64-mingw32)
+    ffi (1.11.1-x86-mingw32)
     friendly_id (5.2.5)
       activerecord (>= 4.0.0)
     globalid (0.4.2)
@@ -453,6 +464,7 @@ DEPENDENCIES
   spree (~> 3.7)
   spree_auth_devise (~> 3.5)
   spree_gateway (~> 3.4)
+  spree_static_content!
   spring
   spring-watcher-listen (~> 2.0.0)
   turbolinks (~> 5)
