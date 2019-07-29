@@ -1,5 +1,7 @@
 Rails.application.routes.draw do
+
   mount Spree::Core::Engine, at: '/'
+
 end
 
 Spree::Core::Engine.add_routes do
@@ -9,6 +11,7 @@ Spree::Core::Engine.add_routes do
     end
 
     get "/messages/support" => "messages#message_support"
+
   end
 
 end
