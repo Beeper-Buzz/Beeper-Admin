@@ -39,7 +39,7 @@ gem 'bootsnap', '>= 1.1.0', require: false
 gem "aws-sdk-s3", require: false
 
 gem 'spree', '~> 3.7'
-gem 'spree_auth_devise', '~> 3.3'
+# gem 'spree_auth_devise', '~> 3.3'
 gem 'spree_gateway', '~> 3.4'
 gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
 
