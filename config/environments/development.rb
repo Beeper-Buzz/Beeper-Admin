@@ -28,7 +28,17 @@ Rails.application.configure do
     end
 
     # Store uploaded files on the local file system (see config/storage.yml for options)
-    config.active_storage.service = :local
+    config.active_storage.service = :amazon
+
+    config.paperclip_defaults = {
+        storage: :s3,
+        s3_credentials: {
+          bucket: ENV.fetch('AWS_BUCKET_NAME'),
+          access_key_id: ENV.fetch('AWS_ACCESS_KEY_ID'),
+          secret_access_key: ENV.fetch('AWS_SECRET_ACCESS_KEY'),
+          s3_region: ENV.fetch('AWS_REGION_NAME'),
+        }
+    }
 
     # Don't care if the mailer can't send.
     config.action_mailer.raise_delivery_errors = false
