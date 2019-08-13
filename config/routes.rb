@@ -10,6 +10,7 @@ Spree::Core::Engine.add_routes do
       resources :message_support, only: [:index]
     end
 
+    get "/messages" => "messages#index"
     get "/messages/support" => "messages#message_support"
 
   end
