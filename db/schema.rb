@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_07_10_194432) do
+ActiveRecord::Schema.define(version: 2019_07_17_000633) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
@@ -124,6 +124,27 @@ ActiveRecord::Schema.define(version: 2019_07_10_194432) do
     t.index ["position"], name: "index_spree_assets_on_position"
     t.index ["viewable_id"], name: "index_assets_on_viewable_id"
     t.index ["viewable_type", "type"], name: "index_assets_on_viewable_type_and_type"
+  end
+
+  create_table "spree_blog_entries", id: :serial, force: :cascade do |t|
+    t.string "title"
+    t.text "body"
+    t.string "permalink"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.boolean "visible", default: false
+    t.datetime "published_at"
+    t.text "summary"
+    t.integer "author_id"
+    t.string "meta_title"
+    t.string "meta_description"
+    t.string "meta_keywords"
+    t.index ["author_id"], name: "index_spree_blog_entries_on_author_id"
+    t.index ["created_at"], name: "index_spree_blog_entries_on_created_at"
+    t.index ["permalink"], name: "index_spree_blog_entries_on_permalink"
+    t.index ["published_at"], name: "index_spree_blog_entries_on_published_at"
+    t.index ["title"], name: "index_spree_blog_entries_on_title"
+    t.index ["visible"], name: "index_spree_blog_entries_on_visible"
   end
 
   create_table "spree_calculators", id: :serial, force: :cascade do |t|
@@ -1167,6 +1188,24 @@ ActiveRecord::Schema.define(version: 2019_07_10_194432) do
     t.string "kind"
     t.index ["default_tax"], name: "index_spree_zones_on_default_tax"
     t.index ["kind"], name: "index_spree_zones_on_kind"
+  end
+
+  create_table "taggings", id: :serial, force: :cascade do |t|
+    t.integer "tag_id"
+    t.string "taggable_type"
+    t.integer "taggable_id"
+    t.string "tagger_type"
+    t.integer "tagger_id"
+    t.string "context", limit: 128
+    t.datetime "created_at"
+    t.index ["tag_id", "taggable_id", "taggable_type", "context", "tagger_id", "tagger_type"], name: "taggings_idx", unique: true
+    t.index ["taggable_id", "taggable_type", "context"], name: "index_taggings_on_taggable_id_and_taggable_type_and_context"
+  end
+
+  create_table "tags", id: :serial, force: :cascade do |t|
+    t.string "name"
+    t.integer "taggings_count", default: 0
+    t.index ["name"], name: "index_tags_on_name", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
