@@ -13,6 +13,7 @@
 ActiveRecord::Schema.define(version: 2019_07_10_194432) do
 
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_stat_statements"
   enable_extension "plpgsql"
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -48,6 +49,21 @@ ActiveRecord::Schema.define(version: 2019_07_10_194432) do
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id"
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.boolean "active", default: true
+    t.string "status", default: "unread"
+    t.text "body"
+    t.string "sender_id"
+    t.string "sender_type"
+    t.string "receiver_id"
+    t.string "receiver_type"
+    t.string "channel_id"
+    t.string "message_id"
+    t.string "conversation_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "spree_addresses", id: :serial, force: :cascade do |t|
