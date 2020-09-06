@@ -2,12 +2,12 @@ if Rails.env.development? || Rails.env.test?
 
 	Dotenv.require_keys(
 		'DEVISE_SECRET_KEY',
-	    'PUSHER_APP_ID',
-	    'PUSHER_KEY',
-	    'PUSHER_SECRET',
-	    'PUSHER_CLUSTER',
-	    'TOKEN_EXPIRATION',
-	    'TOKEN_KEY_BASE',
+		'PUSHER_APP_ID',
+		'PUSHER_KEY',
+		'PUSHER_SECRET',
+		'PUSHER_CLUSTER',
+		'TOKEN_EXPIRATION',
+		'TOKEN_KEY_BASE',
 		'DNA_API_URL',
 		'DNA_API_KEY'
 	)

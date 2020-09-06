@@ -41,6 +41,9 @@ gem "aws-sdk-s3", require: false
 gem 'spree', '~> 3.7'
 gem 'spree_auth_devise', '~> 3.5'
 gem 'spree_gateway', '~> 3.4'
+gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
+
+gem 'rest-client'
 
 gem 'rest-client'
 
