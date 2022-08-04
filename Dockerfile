@@ -6,7 +6,7 @@ RUN apt-get update -qq && apt-get install -y postgresql-client nodejs
 # This is given by the Ruby Image.
 # This will be the de-facto directory that
 # all the contents are going to be stored.
-WORKDIR /dna
+WORKDIR /beeper-admin
 
 # We are copying the Gemfile first, so we can install
 # all the dependencies without any issues
@@ -24,17 +24,17 @@ COPY .env.example .env.development
 RUN gem install bundler:2.2.11 && bundle install
 
 # We copy all the application files from the current directory to out
-# /dna directory
-COPY ./app /dna/app
-COPY ./bin /dna/bin
-COPY ./config /dna/config
-COPY ./config.ru /dna/
-COPY ./db /dna/db
-COPY ./docs /dna/docs
-COPY ./lib /dna/lib
-COPY ./public /dna/public
-COPY ./Rakefile /dna/
-COPY ./vendor /dna/vendor
+# /beeper-admin directory
+COPY ./app /beeper-admin/app
+COPY ./bin /beeper-admin/bin
+COPY ./config /beeper-admin/config
+COPY ./config.ru /beeper-admin/
+COPY ./db /beeper-admin/db
+COPY ./docs /beeper-admin/docs
+COPY ./lib /beeper-admin/lib
+COPY ./public /beeper-admin/public
+COPY ./Rakefile /beeper-admin/
+COPY ./vendor /beeper-admin/vendor
 
 # Add a script to be executed every time the container starts.
 COPY entrypoint.sh /usr/bin/
