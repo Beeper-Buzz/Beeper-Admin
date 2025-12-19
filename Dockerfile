@@ -1,7 +1,17 @@
 # https://docs.docker.com/compose/rails/#define-the-project
 FROM ruby:2.7.2
+# Fix Debian repository URLs for old Buster image
+RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i '/security.debian.org/d' /etc/apt/sources.list
 # The qq is for silent output in the console
-RUN apt-get update -qq && apt-get install -y postgresql-client nodejs
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    nodejs \
+    npm \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # This is given by the Ruby Image.
 # This will be the de-facto directory that
@@ -13,28 +23,23 @@ WORKDIR /beeper-admin
 # Rils will be installed once you load it from the Gemfile
 # This will also ensure that gems are cached and only updated when
 # they change.
-COPY Gemfile ./
-COPY Gemfile.lock ./
+COPY Gemfile Gemfile.lock ./
 
 # Note that dotenv is NOT used in production.  Environment
 # comes from the deployment.
-COPY .env.example .env.development
+COPY .env.development .env.development
 
 # Install the Gems
-RUN gem install bundler:2.2.11 && bundle install
+RUN gem install bundler:2.4.13
 
-# We copy all the application files from the current directory to out
-# /beeper-admin directory
-COPY ./app /beeper-admin/app
-COPY ./bin /beeper-admin/bin
-COPY ./config /beeper-admin/config
-COPY ./config.ru /beeper-admin/
-COPY ./db /beeper-admin/db
-COPY ./docs /beeper-admin/docs
-COPY ./lib /beeper-admin/lib
-COPY ./public /beeper-admin/public
-COPY ./Rakefile /beeper-admin/
-COPY ./vendor /beeper-admin/vendor
+RUN bundle config set force_ruby_platform true
+
+RUN bundle install
+
+COPY . ./
+
+# Precompile assets
+# RUN RAILS_ENV=production bundle exec rake assets:precompile
 
 # Add a script to be executed every time the container starts.
 COPY entrypoint.sh /usr/bin/

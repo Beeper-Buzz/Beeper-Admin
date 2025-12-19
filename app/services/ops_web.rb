@@ -3,8 +3,6 @@ require 'json'
 
 
 class OpsWeb
-
-
 	def self.send_message_to_dna_api(msg)
 		payload = {
 			object_id: msg.id,
@@ -18,7 +16,7 @@ class OpsWeb
 	def self.http_post payload_hsh
 
 		response = RestClient.post(
-		    "#{DNA_API_URL}/dna/internals/",
+		    "#{SITE_URL}/#{SITE_SLUG}/internals/",
 		    payload_hsh.to_json,
 		    { :content_type => :json, accept: :json, :'Api-Key' => DNA_API_KEY }
 		)

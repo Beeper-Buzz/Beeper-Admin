@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_07_31_171148) do
+ActiveRecord::Schema.define(version: 2023_05_27_161848) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -60,6 +60,16 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "contacts", force: :cascade do |t|
+    t.integer "actor_id"
+    t.string "full_name"
+    t.text "email"
+    t.text "phone"
+    t.text "ip"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
   end
 
   create_table "flipper_features", force: :cascade do |t|
@@ -122,6 +132,45 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.boolean "is_active"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "menu_items", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "url"
+    t.string "item_class"
+    t.string "item_id"
+    t.string "item_target"
+    t.integer "parent_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.boolean "is_visible"
+    t.integer "menu_location_id"
+  end
+
+  create_table "menu_locations", force: :cascade do |t|
+    t.string "title"
+    t.string "location"
+    t.boolean "is_visible"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.boolean "is_received"
+    t.boolean "is_read"
+    t.integer "sentiment"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.string "sender_type"
+    t.bigint "sender_id"
+    t.string "receiver_type"
+    t.bigint "receiver_id"
+    t.bigint "thread_table_id"
+    t.text "message"
+    t.index ["receiver_type", "receiver_id"], name: "index_messages_on_receiver"
+    t.index ["sender_type", "sender_id"], name: "index_messages_on_sender"
+    t.index ["thread_table_id"], name: "index_messages_on_thread_table_id"
   end
 
   create_table "spree_addresses", id: :serial, force: :cascade do |t|
@@ -420,6 +469,22 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.index ["source_id", "source_type"], name: "index_spree_log_entries_on_source_id_and_source_type"
   end
 
+  create_table "spree_loyalty_points_transactions", force: :cascade do |t|
+    t.integer "loyalty_points"
+    t.string "type"
+    t.integer "user_id", null: false
+    t.integer "source_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.string "source_type"
+    t.integer "balance", default: 0, null: false
+    t.string "comment"
+    t.string "transaction_id"
+    t.index ["source_type", "source_id"], name: "by_source"
+    t.index ["type"], name: "index_spree_loyalty_points_transactions_on_type"
+    t.index ["user_id"], name: "index_spree_loyalty_points_transactions_on_user_id"
+  end
+
   create_table "spree_menu_items", force: :cascade do |t|
     t.string "name", null: false
     t.string "url"
@@ -560,6 +625,7 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.decimal "non_taxable_adjustment_total", precision: 10, scale: 2, default: "0.0", null: false
     t.boolean "store_owner_notification_delivered"
     t.integer "affiliate_id"
+    t.datetime "paid_at"
     t.index ["affiliate_id"], name: "index_spree_orders_on_affiliate_id"
     t.index ["approver_id"], name: "index_spree_orders_on_approver_id"
     t.index ["bill_address_id"], name: "index_spree_orders_on_bill_address_id"
@@ -939,6 +1005,8 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.datetime "updated_at"
     t.integer "stock_location_id"
     t.integer "return_authorization_reason_id"
+    t.integer "loyalty_points", default: 0, null: false
+    t.string "loyalty_points_transaction_type"
     t.index ["number"], name: "index_spree_return_authorizations_on_number", unique: true
     t.index ["order_id"], name: "index_spree_return_authorizations_on_order_id"
     t.index ["return_authorization_reason_id"], name: "index_return_authorizations_on_return_authorization_reason_id"
@@ -1364,6 +1432,8 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.datetime "confirmation_sent_at"
     t.decimal "referral_credits"
     t.boolean "referrer_benefit_enabled", default: true
+    t.integer "loyalty_points_balance", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
     t.index ["bill_address_id"], name: "index_spree_users_on_bill_address_id"
     t.index ["deleted_at"], name: "index_spree_users_on_deleted_at"
     t.index ["email"], name: "email_idx_unique", unique: true
@@ -1420,7 +1490,15 @@ ActiveRecord::Schema.define(version: 2021_07_31_171148) do
     t.index ["kind"], name: "index_spree_zones_on_kind"
   end
 
+  create_table "thread_tables", force: :cascade do |t|
+    t.boolean "archived"
+    t.boolean "stale"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "messages", "thread_tables"
   add_foreign_key "spree_oauth_access_grants", "spree_oauth_applications", column: "application_id"
   add_foreign_key "spree_oauth_access_tokens", "spree_oauth_applications", column: "application_id"
 end
