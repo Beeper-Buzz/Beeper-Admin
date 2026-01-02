@@ -51,6 +51,8 @@ gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
 gem 'spree_digital', github: 'spree-contrib/spree_digital', branch: 'fix/spree-4-1-plus'
 gem 'spree_reffiliate', github: '1instinct/spree_reffiliate'
 gem 'spree_loyalty_points', github: '1instinct/spree-loyalty-points'
+# gem 'spree_avatax_official', github: 'spree-contrib/spree_avatax_official', branch: 'spree-4-1-plus'
+# gem 'spree_avatax_official', '~> 1.9.0'
 
 gem 'spree_editor', github: 'spree-contrib/spree_editor'
 

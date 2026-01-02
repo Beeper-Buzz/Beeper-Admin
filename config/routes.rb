@@ -28,6 +28,14 @@ Spree::Core::Engine.add_routes do
         get :generate_playback
       end
     end
+    
+    resources :homepage_sections do
+      member do
+        post :move_up
+        post :move_down
+      end
+    end
+    
     resources :contacts
     resources :threads do
       member do
@@ -48,6 +56,7 @@ Spree::Core::Engine.add_routes do
   namespace :api, constraints: { format: 'json' } do
     namespace :v1 do
       resources :live_stream
+      resources :homepage_sections
       resources :users do
         collection do
           post :sign_up
