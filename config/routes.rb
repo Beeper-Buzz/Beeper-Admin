@@ -57,6 +57,12 @@ Spree::Core::Engine.add_routes do
     namespace :v1 do
       resources :live_stream
       resources :homepage_sections
+      resources :favorites, only: [:index, :destroy] do
+        collection do
+          post :toggle
+          get :check
+        end
+      end
       resources :users do
         collection do
           post :sign_up
