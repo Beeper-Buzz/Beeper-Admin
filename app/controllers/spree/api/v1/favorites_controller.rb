@@ -191,6 +191,7 @@ module Spree
             {
               id: favorite.id,
               created_at: favorite.created_at,
+              is_public: favorite.is_public || false,
               variant: {
                 id: variant.id,
                 sku: variant.sku,
@@ -217,6 +218,80 @@ module Spree
               current_page: favorites.current_page,
               total_pages: favorites.total_pages,
               per_page: favorites.limit_value
+            }
+          }
+        end
+        
+        swagger_path '/favorites/{id}/toggle_public' do
+          operation :post do
+            key :summary, 'TOGGLE FAVORITE PUBLIC/PRIVATE'
+            key :description, 'Toggle whether a favorite is public or private'
+            key :tags, ['Favorites']
+            
+            parameter do
+              key :name, 'token'
+              key :in, :query
+              key :description, 'Authentication token (spree_api_key)'
+              key :required, true
+              key :type, :string
+            end
+            
+            parameter do
+              key :name, :id
+              key :in, :path
+              key :description, 'Favorite ID'
+              key :required, true
+              key :type, :integer
+            end
+            
+            response 200 do
+              key :description, 'Successfully toggled'
+              schema do
+                key :'$ref', :favorite_toggle_public_response
+              end
+            end
+            
+            response 401 do
+              key :description, 'Unauthorized'
+            end
+            
+            response 404 do
+              key :description, 'Favorite not found'
+            end
+          end
+        end
+        
+        swagger_schema :favorite_toggle_public_response do
+          property :status do
+            key :type, :integer
+          end
+          property :message do
+            key :type, :string
+          end
+          property :data do
+            property :id do
+              key :type, :integer
+            end
+            property :is_public do
+              key :type, :boolean
+            end
+          end
+        end
+        
+        def toggle_public
+          favorite = current_api_user.favorites.find_by(id: params[:id])
+          unless favorite
+            return error_model(404, "Favorite not found")
+          end
+          
+          favorite.update(is_public: !favorite.is_public)
+          
+          render json: {
+            status: 200,
+            message: favorite.is_public ? "Favorite is now public" : "Favorite is now private",
+            data: {
+              id: favorite.id,
+              is_public: favorite.is_public
             }
           }
         end

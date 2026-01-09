@@ -7,12 +7,13 @@ class Favorite < Spree::Base
   validates :user_id, uniqueness: { scope: :variant_id, message: "has already favorited this variant" }
   
   # Ransackable attributes for search
-  self.whitelisted_ransackable_attributes = %w[user_id variant_id created_at]
+  self.whitelisted_ransackable_attributes = %w[user_id variant_id created_at is_public]
   
   # Scopes
   scope :recent, -> { order(created_at: :desc) }
   scope :for_user, ->(user) { where(user: user) }
   scope :for_variant, ->(variant) { where(variant: variant) }
+  scope :public_favorites, -> { where(is_public: true) }
   
   # Check if user has favorited a variant
   def self.favorited?(user, variant)

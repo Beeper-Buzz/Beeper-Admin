@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_01_02_154951) do
+ActiveRecord::Schema.define(version: 2026_01_09_054125) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -77,6 +77,7 @@ ActiveRecord::Schema.define(version: 2026_01_02_154951) do
     t.bigint "variant_id", null: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.boolean "is_public"
     t.index ["user_id", "variant_id"], name: "index_favorites_on_user_and_variant", unique: true
     t.index ["user_id"], name: "index_favorites_on_user_id"
     t.index ["variant_id"], name: "index_favorites_on_variant_id"
@@ -1528,6 +1529,13 @@ ActiveRecord::Schema.define(version: 2026_01_02_154951) do
   create_table "thread_tables", force: :cascade do |t|
     t.boolean "archived"
     t.boolean "stale"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "user_follows", force: :cascade do |t|
+    t.integer "follower_id"
+    t.integer "following_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
   end

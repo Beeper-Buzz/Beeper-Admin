@@ -400,6 +400,7 @@ RAILS_SERVE_STATIC_FILES
 
 **Live Streaming** (`/api/v1`):
 - `GET/POST /live_stream` - Live stream CRUD
+- `GET /live_stream/:id` - Live stream details
 
 **Messaging** (`/api/v1`):
 - `GET/POST /messages` - Message CRUD
