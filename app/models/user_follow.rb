@@ -22,15 +22,13 @@ class UserFollow < Spree::Base
   
   # Toggle follow (add if not exists, remove if exists)
   def self.toggle(follower, following)
-    return false if follower == following
-    
     follow = find_by(follower: follower, following: following)
     if follow
       follow.destroy
       false
     else
-      create(follower: follower, following: following)
-      true
+      new_follow = new(follower: follower, following: following)
+      new_follow.save
     end
   end
   
