@@ -24,7 +24,7 @@ end
     stale: [true, false].sample,
     archived: i > 7 ? true : false, # Archive older threads
     created_at: rand(30.days.ago..Time.now),
-    updated_at: Time.now
+    updated_at: [created_at, Time.now].max
   )
   
   # Create a conversation with 3-8 messages
