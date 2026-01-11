@@ -33,6 +33,7 @@ Spree::Core::Engine.add_routes do
       member do
         post :move_up
         post :move_down
+        patch :toggle_visibility
       end
     end
     
