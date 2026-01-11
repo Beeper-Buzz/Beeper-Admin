@@ -392,7 +392,7 @@ module Spree
           
           # Check if already following
           if UserFollow.following?(@current_api_user, user_to_follow)
-            return singular_success_model(200, "Already following this user", {
+            return singular_success_model(200, "Successfully followed user", {
               is_following: true,
               followers_count: user_to_follow.followers.count
             })

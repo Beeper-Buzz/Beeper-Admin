@@ -191,7 +191,7 @@ module Spree
             {
               id: favorite.id,
               created_at: favorite.created_at,
-              is_public: favorite.is_public || false,
+              is_public: favorite.is_public,
               variant: {
                 id: variant.id,
                 sku: variant.sku,

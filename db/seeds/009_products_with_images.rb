@@ -6,8 +6,13 @@ require 'open-uri'
 # Helper method to attach image from URL
 def attach_image_from_url(product, image_url, alt_text = nil)
   begin
-    downloaded_image = URI.open(image_url)
-    filename = File.basename(URI.parse(image_url).path)
+    uri = URI.parse(image_url)
+    unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+      raise ArgumentError, "Unsupported URL scheme for image: #{uri.scheme}"
+    end
+
+    downloaded_image = uri.open(open_timeout: 5, read_timeout: 10)
+    filename = File.basename(uri.path)
     
     product.images.create!(
       attachment: {
