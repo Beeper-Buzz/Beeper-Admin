@@ -194,20 +194,20 @@ shipping_category = Spree::ShippingCategory.find_or_create_by!(name: "Default")
 
 products_data.each do |product_data|
   # Skip if product with this SKU already exists
-  if Spree::Product.exists?(sku: product_data[:sku])
+  if Spree::Variant.exists?(sku: product_data[:sku])
     puts "⊘ Skipping #{product_data[:name]} (already exists)"
     next
   end
 
   begin
-    # Create the product
+    # Create the product with SKU on master variant
     product = Spree::Product.create!(
       name: product_data[:name],
       description: product_data[:description],
       price: product_data[:price],
       available_on: Time.current,
       shipping_category: shipping_category,
-      sku: product_data[:sku]
+      sku: product_data[:sku]  # This gets assigned to master variant automatically
     )
 
     # Add to appropriate taxon
