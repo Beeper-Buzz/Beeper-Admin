@@ -29,3 +29,10 @@ end
 # Spree::Api::Dependencies.storefront_cart_serializer = 'MyRailsApp::CartSerializer'
 
 Spree.user_class = "Spree::User"
+
+# Stock splitters configuration - not supported in this version of Spree
+# Spree::Config.stock_splitters = [
+#   Spree::Stock::Splitter::ShippingCategory,
+#   Spree::Stock::Splitter::Weight,
+#   Spree::Stock::Splitter::Backordered
+# ]
