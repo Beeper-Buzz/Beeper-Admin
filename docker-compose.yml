@@ -1,8 +1,7 @@
-version: '3.3'
-
+version: '3.4'
 services:
   db:
-    image: postgres:15
+    image: postgres:16
     ports:
       - "5433:5432"
     volumes:
@@ -17,4 +16,4 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/postgres
+      DATABASE_URL: postgres://postgres:password@db:5432/dna_admin_development
