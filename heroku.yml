@@ -10,10 +10,4 @@ release:
   command:
     - echo "Migrations already loaded via schema:load"
 run:
-  web:
-    command:
-      - bundle
-      - exec
-      - puma
-      - "-C"
-      - config/puma.rb
+  web: bundle exec puma -C config/puma.rb
