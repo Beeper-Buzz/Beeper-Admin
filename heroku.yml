@@ -9,5 +9,3 @@ release:
   image: web
   command:
     - echo "Migrations already loaded via schema:load"
-run:
-  web: bundle exec puma -C config/puma.rb
