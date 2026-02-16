@@ -9,7 +9,7 @@ class CreateSpreeStockTransfers < ActiveRecord::Migration[4.2]
       t.timestamps null: false
     end
 
-    add_index :spree_stock_transfers, :source_location_id
-    add_index :spree_stock_transfers, :destination_location_id
-  end
+        add_index :spree_stock_transfers, :source_location_id
+        add_index :spree_stock_transfers, :destination_location_id
+    end
 end

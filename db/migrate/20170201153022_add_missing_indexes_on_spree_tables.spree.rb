@@ -17,13 +17,13 @@ class AddMissingIndexesOnSpreeTables < ActiveRecord::Migration[4.2]
                 name: 'index_products_promotion_rules_on_promotion_rule_and_product'
     end
 
-    unless index_exists? :spree_orders, :canceler_id
-      add_index :spree_orders, :canceler_id
-    end
+        unless index_exists? :spree_orders, :canceler_id
+            add_index :spree_orders, :canceler_id
+        end
 
-    unless index_exists? :spree_orders, :store_id
-      add_index :spree_orders, :store_id
-    end
+        unless index_exists? :spree_orders, :store_id
+            add_index :spree_orders, :store_id
+        end
 
     if table_exists?(:spree_orders_promotions) && !index_exists?(:spree_orders_promotions, [:promotion_id, :order_id])
       add_index :spree_orders_promotions, [:promotion_id, :order_id]
@@ -64,5 +64,4 @@ class AddMissingIndexesOnSpreeTables < ActiveRecord::Migration[4.2]
                 [:option_value_id, :variant_id],
                 name: 'index_option_values_variants_on_option_value_and_variant'
     end
-  end
 end

@@ -34,5 +34,4 @@ class CreateStoreFromPreferences < ActiveRecord::Migration[4.2]
         s.code             = 'spree'
       end.save!
     end
-  end
 end

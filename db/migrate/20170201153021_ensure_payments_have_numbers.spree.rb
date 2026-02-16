@@ -6,5 +6,4 @@ class EnsurePaymentsHaveNumbers < ActiveRecord::Migration[4.2]
       payment.generate_number
       payment.update_columns(number: payment.number)
     end
-  end
 end

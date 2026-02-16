@@ -6,7 +6,7 @@ class CreateSpreePromotionCategories < ActiveRecord::Migration[4.2]
       t.timestamps null: false
     end
 
-    add_column :spree_promotions, :promotion_category_id, :integer
-    add_index :spree_promotions, :promotion_category_id
-  end
+        add_column :spree_promotions, :promotion_category_id, :integer
+        add_index :spree_promotions, :promotion_category_id
+    end
 end

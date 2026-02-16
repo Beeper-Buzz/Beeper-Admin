@@ -6,5 +6,4 @@ class CreateSpreeCustomerReturns < ActiveRecord::Migration[4.2]
       t.integer :stock_location_id
       t.timestamps null: false
     end
-  end
 end

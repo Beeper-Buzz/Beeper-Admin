@@ -10,5 +10,4 @@ class FixAdjustmentOrderPresence < ActiveRecord::Migration[4.2]
         adjustment.update!(adjustable: adjustable.order)
       end
     end
-  end
 end

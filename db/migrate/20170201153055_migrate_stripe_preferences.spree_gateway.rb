@@ -5,5 +5,4 @@ class MigrateStripePreferences < ActiveRecord::Migration[4.2]
       pref.key = pref.key.gsub('login', 'secret_key')
       pref.save
     end
-  end
 end

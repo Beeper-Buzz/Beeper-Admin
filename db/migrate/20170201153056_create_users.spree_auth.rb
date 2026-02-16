@@ -26,5 +26,4 @@ class CreateUsers < ActiveRecord::Migration[4.2]
         t.string   "openid_identifier"
       end
     end
-  end
 end

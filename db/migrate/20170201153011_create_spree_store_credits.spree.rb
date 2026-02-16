@@ -17,9 +17,11 @@ class CreateSpreeStoreCredits < ActiveRecord::Migration[4.2]
       t.timestamps null: false
     end
 
-    add_index :spree_store_credits, :deleted_at
-    add_index :spree_store_credits, :user_id
-    add_index :spree_store_credits, :type_id
-    add_index :spree_store_credits, [:originator_id, :originator_type], name: :spree_store_credits_originator
-  end
+        add_index :spree_store_credits, :deleted_at
+        add_index :spree_store_credits, :user_id
+        add_index :spree_store_credits, :type_id
+        add_index :spree_store_credits,
+                  %i[originator_id originator_type],
+                  name: :spree_store_credits_originator
+    end
 end

@@ -4,7 +4,8 @@ class UpdatePaypalPaymentMethodType < ActiveRecord::Migration[4.2]
     Spree::PaymentMethod.where(:type => "Spree::Gateway::PayPal").update_all(:type => "Spree::Gateway::PayPalGateway")
   end
 
-  def down
-    Spree::PaymentMethod.where(:type => "Spree::Gateway::PayPalGateway").update_all(:type => "Spree::Gateway::PayPal")
-  end
+    def down
+        Spree::PaymentMethod.where(type: 'Spree::Gateway::PayPalGateway')
+            .update_all(type: 'Spree::Gateway::PayPal')
+    end
 end

@@ -5,8 +5,8 @@ class ConvertUserRememberField < ActiveRecord::Migration[4.2]
     add_column :spree_users, :remember_created_at, :datetime
   end
 
-  def down
-    remove_column :spree_users, :remember_created_at
-    add_column :spree_users, :remember_created_at, :string
-  end
+    def down
+        remove_column :spree_users, :remember_created_at
+        add_column :spree_users, :remember_created_at, :string
+    end
 end

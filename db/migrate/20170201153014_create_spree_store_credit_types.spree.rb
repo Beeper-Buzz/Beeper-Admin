@@ -6,6 +6,4 @@ class CreateSpreeStoreCreditTypes < ActiveRecord::Migration[4.2]
       t.integer :priority
       t.timestamps null: false
     end
-    add_index :spree_store_credit_types, :priority
-  end
 end

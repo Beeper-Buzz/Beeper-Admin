@@ -21,9 +21,6 @@ end
 #       Just removing an entry from this initializer will make the dependency value go away.
 #
 Spree.dependencies do |dependencies|
-  # Example:
-  # Uncomment to change the default Service handling adding Items to Cart
-  # dependencies.cart_add_item_service = 'MyNewAwesomeService'
 end
 
 # Spree::Api::Dependencies.storefront_cart_serializer = 'MyRailsApp::CartSerializer'

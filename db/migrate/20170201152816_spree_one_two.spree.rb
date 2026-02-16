@@ -1,11 +1,25 @@
 # This migration comes from spree (originally 20120831092320)
 class SpreeOneTwo < ActiveRecord::Migration[4.2]
-  def up
-    # This migration is just a compressed version of all the previous
-    # migrations for spree_core. Do not run it if one of the core tables
-    # already exists. Assume the best.
-    return if data_source_exists?(:spree_addresses)
+    def up
+        # This migration is just a compressed version of all the previous
+        # migrations for spree_core. Do not run it if one of the core tables
+        # already exists. Assume the best.
+        return if data_source_exists?(:spree_addresses)
 
+        create_table :spree_activators do |t|
+            t.string :description
+            t.datetime :expires_at
+            t.datetime :starts_at
+            t.string :name
+            t.string :event_name
+            t.string :type
+            t.integer :usage_limit
+            t.string :match_policy, default: 'all'
+            t.string :code
+            t.boolean :advertise, default: false
+            t.string :path
+            t.timestamps null: false, precision: 6
+        end
 
     create_table :spree_activators do |t|
       t.string     :description
