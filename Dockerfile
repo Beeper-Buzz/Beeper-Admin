@@ -26,7 +26,7 @@ RUN gem install bundler -v 2.4.22 && bundle install
 COPY . /beeper-admin
 
 # Precompile assets for production
-RUN RAILS_ENV=production SECRET_KEY_BASE=dummy bundle exec rake assets:precompile
+RUN RAILS_ENV=production SECRET_KEY_BASE=dummy DATABASE_URL=postgresql://dummy@localhost/dummy bundle exec rake assets:precompile
 
 EXPOSE 3000
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
