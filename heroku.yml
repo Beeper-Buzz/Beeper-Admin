@@ -5,7 +5,7 @@ setup:
 build:
   docker:
     web: Dockerfile
-release:
-  image: web
-  command:
-    - echo "Migrations already loaded via schema:load"
+  config:
+    RAILS_ENV: production
+run:
+  web: bundle exec rails server -b 0.0.0.0 -p $PORT
