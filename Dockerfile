@@ -43,5 +43,5 @@ RUN chmod +x /usr/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 3000
 
-# Start the main process.
-CMD ["rails", "server", "-b", "0.0.0.0"]
+# Start the main process (use puma, not rails server)
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
