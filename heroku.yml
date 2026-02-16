@@ -11,7 +11,3 @@ release:
     - bundle exec rails db:migrate
 run:
   web: bundle exec puma -C config/puma.rb
-  asset-syncer:
-    command:
-      - python asset-syncer.py
-    image: worker
