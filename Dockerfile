@@ -25,10 +25,6 @@ WORKDIR /beeper-admin
 # they change.
 COPY Gemfile Gemfile.lock ./
 
-# Note that dotenv is NOT used in production.  Environment
-# comes from the deployment.
-COPY .env.development .env.development
-
 # Install the Gems
 RUN gem install bundler:2.4.13
 
