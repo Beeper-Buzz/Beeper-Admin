@@ -8,4 +8,4 @@ build:
   config:
     RAILS_ENV: production
 run:
-  web: bundle exec rake assets:precompile && bundle exec rails server -b 0.0.0.0 -p $PORT
+  web: bundle exec rails server -b 0.0.0.0 -p $PORT
