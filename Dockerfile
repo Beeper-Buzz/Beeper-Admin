@@ -21,7 +21,7 @@ WORKDIR /beeper-admin
 COPY Gemfile /beeper-admin/Gemfile
 COPY Gemfile.lock /beeper-admin/Gemfile.lock
 
-RUN bundle install
+RUN gem install bundler -v 2.4.22 && bundle install
 
 COPY . /beeper-admin
 
