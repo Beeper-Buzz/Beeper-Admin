@@ -109,7 +109,7 @@ on github is hooked in to the deployment.
 ### Heroku
 
 1. Create a new pipeline & app
-2. Add Postgres: `heroku addons:create heroku-postgresql:hobby-dev`
+2. Add Postgres: `heroku addons:create heroku-postgresql:essential-0 -a dna-admin-staging`
 3. Grab ENV vars from another app: `heroku config -s -a dna-admin-staging > config.txt`
 4. Grab the DB creds from <heroku.com>, add them to `config.txt`
 5. Edit other vars locally
