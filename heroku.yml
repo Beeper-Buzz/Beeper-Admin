@@ -8,6 +8,6 @@ build:
 release:
   image: web
   command:
-    - bundle exec rails db:migrate
+    - echo "Migrations already loaded via schema:load"
 run:
   web: bundle exec puma -C config/puma.rb
