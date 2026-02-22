@@ -15,6 +15,7 @@
 /storage/*
 !/storage/.keep
 
+
 # dotenv
 envvars.txt
 .env
@@ -23,6 +24,10 @@ envvars.txt
 .env.staging
 .env.production
 .prettierrc
+secret.yml
+secret.yaml
+secrets.yml
+secrets.yaml
 
 .byebug_history
 # Ignore precompiled javascript packs
@@ -45,10 +50,12 @@ capybara-*.html
 rerun.txt
 pickle-email-*.html
 
+
 config/initializers/secret_token.rb
 config/master.key
 # Only include if you have production secrets in this file, which is no longer a Rails default
 # config/secrets.yml
+
 
 ## Environment normalization:
 /.bundle
@@ -72,6 +79,8 @@ bower.json
 node_modules/
 /node_modules
 
+
+
 # Ignore yarn files
 /yarn-error.log
 yarn-debug.log*
@@ -81,3 +90,5 @@ secret.yaml
 *.tar
 *.yml.prod
 docker-compose.yml.local
+
+.anima/

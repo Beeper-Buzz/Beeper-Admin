@@ -9,7 +9,7 @@
 # In order to initialize a setting do:
 # config.setting_name = 'new value'
 Spree.config do |config|
-  config.admin_interface_logo = ENV['COMPANY_LOGO']
+  config.admin_interface_logo = 'instinct_logo.png'
   # Example:
   # Uncomment to stop tracking inventory levels in the application
   # config.track_inventory_levels = false
@@ -29,3 +29,9 @@ end
 # Spree::Api::Dependencies.storefront_cart_serializer = 'MyRailsApp::CartSerializer'
 
 Spree.user_class = "Spree::User"
+
+# Spree::Config.stock_splitters = [
+#   Spree::Stock::Splitter::ShippingCategory,
+#   Spree::Stock::Splitter::Weight,
+#   Spree::Stock::Splitter::Backordered
+# ]

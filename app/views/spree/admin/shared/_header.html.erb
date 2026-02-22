@@ -11,15 +11,18 @@
       </button>
     </div>
     <div class="col text-center text-lg-left">
-      <%= link_to(
-        image_tag(Spree::Config[:admin_interface_logo], id: 'logo', alt: current_store.name),
-        spree.admin_path,
-        class: "logo navbar-brand"
-      ) %>
+      
     </div>
 
-    <div class="col-3 col-sm-4 text-right p-0">
-      <%= render partial: 'spree/admin/shared/account_nav' %>
+  <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-xs-9 col-md-10">
+          <div class="navbar-right">
+            <%= render partial: 'spree/admin/shared/account_nav' %>
+          </div>
+        </div>
+      </div>
     </div>
   </nav>
 </header>

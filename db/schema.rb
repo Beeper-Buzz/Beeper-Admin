@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_08_06_153324) do
+ActiveRecord::Schema.define(version: 2026_01_11_065155) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -72,6 +72,17 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.datetime "updated_at", precision: 6, null: false
   end
 
+  create_table "favorites", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "variant_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.boolean "is_public"
+    t.index ["user_id", "variant_id"], name: "index_favorites_on_user_and_variant", unique: true
+    t.index ["user_id"], name: "index_favorites_on_user_id"
+    t.index ["variant_id"], name: "index_favorites_on_variant_id"
+  end
+
   create_table "flipper_features", force: :cascade do |t|
     t.string "key", null: false
     t.datetime "created_at", null: false
@@ -100,6 +111,29 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id"
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
+  end
+
+  create_table "homepage_sections", force: :cascade do |t|
+    t.string "title"
+    t.string "section_type", null: false
+    t.text "content"
+    t.integer "position", null: false
+    t.boolean "is_visible", default: true
+    t.json "settings"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["is_visible"], name: "index_homepage_sections_on_is_visible"
+    t.index ["position"], name: "index_homepage_sections_on_position"
+    t.index ["section_type"], name: "index_homepage_sections_on_section_type"
+  end
+
+  create_table "live_stream_contacts", force: :cascade do |t|
+    t.bigint "live_stream_id", null: false
+    t.bigint "contact_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["contact_id"], name: "index_live_stream_contacts_on_contact_id"
+    t.index ["live_stream_id"], name: "index_live_stream_contacts_on_live_stream_id"
   end
 
   create_table "live_stream_likes", force: :cascade do |t|
@@ -133,8 +167,7 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.bigint "thread_table_id"
-    t.integer "actor_id"
-    t.index ["thread_table_id"], name: "index_live_streams_on_thread_table_id"
+    t.bigint "actor_id"
   end
 
   create_table "menu_items", force: :cascade do |t|
@@ -472,18 +505,6 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.index ["source_id", "source_type"], name: "index_spree_log_entries_on_source_id_and_source_type"
   end
 
-  create_table "spree_menu_items", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "url"
-    t.string "item_class"
-    t.string "item_id"
-    t.string "item_target"
-    t.integer "parent_id"
-    t.integer "position", default: 0, null: false
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
-  end
-
   create_table "spree_loyalty_points_transactions", force: :cascade do |t|
     t.integer "loyalty_points"
     t.string "type"
@@ -498,6 +519,18 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.index ["source_type", "source_id"], name: "by_source"
     t.index ["type"], name: "index_spree_loyalty_points_transactions_on_type"
     t.index ["user_id"], name: "index_spree_loyalty_points_transactions_on_user_id"
+  end
+
+  create_table "spree_menu_items", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "url"
+    t.string "item_class"
+    t.string "item_id"
+    t.string "item_target"
+    t.integer "parent_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
   end
 
   create_table "spree_oauth_access_grants", force: :cascade do |t|
@@ -1510,7 +1543,19 @@ ActiveRecord::Schema.define(version: 2021_08_06_153324) do
     t.datetime "updated_at", precision: 6, null: false
   end
 
+  create_table "user_follows", force: :cascade do |t|
+    t.integer "follower_id"
+    t.integer "following_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "favorites", "spree_users", column: "user_id"
+  add_foreign_key "favorites", "spree_variants", column: "variant_id"
+  add_foreign_key "live_stream_contacts", "contacts"
+  add_foreign_key "live_stream_contacts", "live_streams"
+  add_foreign_key "live_streams", "spree_users", column: "actor_id"
   add_foreign_key "live_streams", "thread_tables"
   add_foreign_key "messages", "thread_tables"
   add_foreign_key "spree_oauth_access_grants", "spree_oauth_applications", column: "application_id"
