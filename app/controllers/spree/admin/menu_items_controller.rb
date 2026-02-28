@@ -92,6 +92,7 @@ module Spree
           :parent_id,
           :position,
           :menu_location_id
+          :position
         ]
       end
 

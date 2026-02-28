@@ -2,7 +2,8 @@
 
 This repo is using Spree 4.2.4
 
-## Build
+# Local Docker Development
+This repo is using Spree 4.2.4
 
 This should only have to be done once, or whenever the Gemfile is updated.
 
@@ -17,8 +18,6 @@ The manual way:
 ```shell
 docker-compose build
 ```
-
-## Create Containers
 
 ```shell
 docker-compose up
