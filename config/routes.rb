@@ -98,12 +98,12 @@ Spree::Core::Engine.add_routes do
       resources :contacts
       resources :messages
       resources :threads
-      resources :menu_items, only: [:index, :show] do
+      resources :menu_items do
         member do
           get :children
         end
       end
-      resources :menu_locations, only: [:index, :show] do
+      resources :menu_locations do
         member do
           get :menu_items
         end

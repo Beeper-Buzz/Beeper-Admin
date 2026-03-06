@@ -140,6 +140,41 @@ class Spree::Api::V1::MenuLocationsController < Spree::Api::BaseController
     end
   end
 
+  def create
+    menu_location = MenuLocation.new(menu_location_params)
+    if menu_location.save
+      singular_success_model(200, 'Menu location created successfully.', menu_location_detail(menu_location.id))
+    else
+      error_model(400, menu_location.errors.full_messages.join(','))
+    end
+  end
+
+  def update
+    menu_location = MenuLocation.find_by_id(params[:id])
+    if menu_location.blank?
+      error_model(400, 'Menu location not found.')
+      return
+    end
+    if menu_location.update(menu_location_params)
+      singular_success_model(200, 'Menu location updated successfully.', menu_location_detail(menu_location.id))
+    else
+      error_model(400, menu_location.errors.full_messages.join(','))
+    end
+  end
+
+  def destroy
+    menu_location = MenuLocation.find_by_id(params[:id])
+    if menu_location.blank?
+      error_model(400, 'Menu location not found.')
+      return
+    end
+    if menu_location.destroy
+      success_model(200, 'Menu location deleted successfully.')
+    else
+      error_model(400, menu_location.errors.full_messages.join(','))
+    end
+  end
+
   private
   def menu_location_params
     params.require(:menu_location).permit(:title, :location, :is_visible)

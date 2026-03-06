@@ -170,9 +170,44 @@ class Spree::Api::V1::MenuItemsController < Spree::Api::BaseController
     end
   end
 
+  def create
+    menu_item = MenuItem.new(menu_item_params)
+    if menu_item.save
+      singular_success_model(200, 'Menu item created successfully.', menu_item_detail(menu_item.id))
+    else
+      error_model(400, menu_item.errors.full_messages.join(','))
+    end
+  end
+
+  def update
+    menu_item = MenuItem.find_by_id(params[:id])
+    if menu_item.blank?
+      error_model(400, 'Menu item not found.')
+      return
+    end
+    if menu_item.update(menu_item_params)
+      singular_success_model(200, 'Menu item updated successfully.', menu_item_detail(menu_item.id))
+    else
+      error_model(400, menu_item.errors.full_messages.join(','))
+    end
+  end
+
+  def destroy
+    menu_item = MenuItem.find_by_id(params[:id])
+    if menu_item.blank?
+      error_model(400, 'Menu item not found.')
+      return
+    end
+    if menu_item.destroy
+      success_model(200, 'Menu item deleted successfully.')
+    else
+      error_model(400, menu_item.errors.full_messages.join(','))
+    end
+  end
+
   private
   def menu_item_params
-    params.require(:menu_item).permit(:name, :url, :item_class, :item_id, :item_target, :parent_id, :position, :is_visible)
+    params.require(:menu_item).permit(:name, :url, :item_class, :item_id, :item_target, :parent_id, :position, :is_visible, :menu_location_id)
   end
   def menu_item_detail(id)
     menu_item = MenuItem.find(id)
