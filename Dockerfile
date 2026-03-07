@@ -25,5 +25,8 @@ RUN gem install bundler -v 2.4.22 && bundle install
 
 COPY . /beeper-admin
 
+# Re-run bundle install to restore git source gems after COPY overwrites Gemfile.lock
+RUN bundle install
+
 EXPOSE 3000
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
