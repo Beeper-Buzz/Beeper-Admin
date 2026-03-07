@@ -12,7 +12,7 @@ gem 'pg', '~> 1.5.0'
 # Use Puma as the app server
 gem 'puma', '~> 4.3'
 # Use SCSS for stylesheets
-gem 'sass-rails', '~> 5.0'
+gem 'sass-rails', '>= 5.0'
 # Sass engine required by bootstrap
 gem 'sassc-rails'
 # Use Uglifier as compressor for JavaScript assets
@@ -30,14 +30,6 @@ gem 'jbuilder', '~> 2.5'
 # gem 'redis', '~> 4.0'
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
-gem 'rack-cors'
-
-# Use ActiveStorage variant
-# gem 'mini_magick', '~> 4.8'
-
-# Use Capistrano for deployment
-# gem 'capistrano-rails', group: :development
-
 # Handle CORs request errors
 gem 'rack-cors', :require => 'rack/cors'
 
@@ -51,35 +43,25 @@ gem "net-http"
 gem 'spree', github: '1instinct/spree'
 gem 'spree_auth_devise', '~> 4.3'
 gem 'spree_gateway', '~> 3.9'
-
-gem 'spree_auth_devise', '~> 3.5'
-gem 'spree_gateway', '~> 3.4'
-
-gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
-
-gem 'spree_auth_devise', '~> 4.3'
-gem 'spree_gateway', '~> 3.9'
-gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
+# Extensions disabled due to version conflicts with spree 4.3.0.alpha fork
+# Re-enable once extension forks are updated
+# gem 'spree_static_content', github: 'spree-contrib/spree_static_content'
 # gem 'spree_digital', github: 'spree-contrib/spree_digital'
-gem 'spree_reffiliate', github: '1instinct/spree_reffiliate'
-gem 'spree_loyalty_points', github: '1instinct/spree-loyalty-points'
-# gem 'spree_avatax_official', github: 'spree-contrib/spree_avatax_official', branch: 'spree-4-1-plus'
-# gem 'spree_avatax_official', '~> 1.9.0'
-
-gem 'spree_avatar', github: '1instinct/spree_avatar'
-gem 'spree_editor', github: 'spree-contrib/spree_editor'
+# gem 'spree_reffiliate', github: '1instinct/spree_reffiliate'
+# gem 'spree_loyalty_points', github: '1instinct/spree-loyalty-points'
+# gem 'spree_avatar', github: '1instinct/spree_avatar'
+# gem 'spree_editor', github: 'spree-contrib/spree_editor'
 
 gem 'paperclip', '~> 6.1.0'
 
 # doesn't support spree 4
-#gem 'spree_promo_users_codes', github: 'vinsol-spree-contrib/spree_promo_users_codes', branch: 'master'
+# gem 'spree_promo_users_codes', github: 'vinsol-spree-contrib/spree_promo_users_codes', branch: 'master'
 
 gem 'sprockets-helpers', '~> 1.2.1'
 
 gem 'rest-client'
 # Tool to create APi and it's documentation
 gem 'swagger-blocks'
-gem 'spree_promo_users_codes', github: 'vinsol-spree-contrib/spree_promo_users_codes', branch: 'master'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console

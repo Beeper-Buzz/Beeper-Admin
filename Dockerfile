@@ -12,7 +12,7 @@ RUN apt-get update -qq && apt-get install -y \
     npm \
     curl \
     && rm -rf /var/lib/apt/lists/*
-    
+
 RUN apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs
 
 RUN mkdir /beeper-admin
