@@ -11,6 +11,9 @@ threads threads_count, threads_count
 #
 port ENV.fetch('PORT') { 3_000 }
 
+# Bind to all interfaces (required for Heroku)
+bind "tcp://0.0.0.0:#{ENV.fetch('PORT') { 3_000 }}"
+
 # Specifies the `environment` that Puma will run in.
 #
 environment ENV.fetch('RAILS_ENV') { 'development' }

@@ -5,13 +5,7 @@ setup:
 build:
   docker:
     web: Dockerfile
-release:
-  image: web
-  command:
-    - bundle exec rails db:migrate
+  config:
+    RAILS_ENV: production
 run:
-  web: bundle exec puma -C config/puma.rb
-  asset-syncer:
-    command:
-      - python asset-syncer.py
-    image: worker
+  web: bash -c "bundle exec rake assets:precompile & bundle exec rails server -b 0.0.0.0 -p $PORT"
