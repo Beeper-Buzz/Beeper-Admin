@@ -1,11 +1,4 @@
 GIT
-  remote: https://github.com/1instinct/spree-loyalty-points.git
-  revision: e99d2ed4913fd52bed865a5c814fefec7d82a28f
-  specs:
-    spree_loyalty_points (1.2.1)
-      spree_core (~> 4.2.5)
-
-GIT
   remote: https://github.com/1instinct/spree.git
   revision: 6bda546328a300aff04591d89d40c7b3f4b02473
   branch: instinct-dna
@@ -72,45 +65,6 @@ GIT
     spree_sample (4.2.5)
       ffaker (~> 2.9)
       spree_core (= 4.2.5)
-
-GIT
-  remote: https://github.com/1instinct/spree_avatar.git
-  revision: 2831457dd9d7bd3e36981f3fae57f978ba579a4f
-  specs:
-    spree_avatar (1.1.0)
-      active_storage_validations
-      inline_svg
-      rails (~> 6.0)
-      spree (~> 4.0, < 6.0)
-
-GIT
-  remote: https://github.com/1instinct/spree_reffiliate.git
-  revision: 16a092086888b5d9f60aa8510f5bdddf4eb96953
-  specs:
-    spree_reffiliate (3.2.0.alpha)
-      spree_core (>= 3.2.0, <= 4.3.0.alpha)
-
-GIT
-  remote: https://github.com/spree-contrib/spree_editor.git
-  revision: 1e79e8c1150e784f76ef2f4e008a8b0e9133bab3
-  specs:
-    spree_editor (3.3.2)
-      ckeditor (~> 5.0.0)
-      coffee-rails
-      deface (~> 1.0)
-      spree_backend (>= 3.1.0, < 5.0)
-      spree_core (>= 3.1.0, < 5.0)
-      spree_extension
-      tinymce-rails (~> 4.2.5)
-
-GIT
-  remote: https://github.com/spree-contrib/spree_static_content.git
-  revision: d2205a3a48f85d0f4d65fcc38dccb887f920bd74
-  specs:
-    spree_static_content (4.2.0)
-      deface (~> 1.5)
-      spree_core (>= 3.7.0, < 5.0)
-      spree_extension
 
 GEM
   remote: https://rubygems.org/
@@ -609,12 +563,7 @@ DEPENDENCIES
   selenium-webdriver
   spree!
   spree_auth_devise (~> 4.3)
-  spree_avatar!
-  spree_editor!
   spree_gateway (~> 3.9)
-  spree_loyalty_points!
-  spree_reffiliate!
-  spree_static_content!
   spring
   spring-watcher-listen (~> 2.0.0)
   sprockets-helpers (~> 1.2.1)
