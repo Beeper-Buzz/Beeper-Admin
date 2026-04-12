@@ -94,6 +94,7 @@ Spree::Core::Engine.add_routes do
           post :unfollow
         end
       end
+      get "users/by_handle/:handle/profile", to: "users#profile_by_handle"
       resources :pages, only: [:index, :show], controller: 'pages', param: :slug
       resources :contacts
       resources :messages

@@ -5,7 +5,7 @@ module Spree
         include Swagger::Blocks
         include Response
         include Spree::Api::V1::GlobalHelper
-        before_action :authenticate_user, :except => [:sign_up, :sign_in, :profile]
+        before_action :authenticate_user, :except => [:sign_up, :sign_in, :profile, :profile_by_handle]
 
         swagger_path "/users/sign_up" do
           operation :post do
@@ -251,37 +251,15 @@ module Spree
         
         def profile
           user = Spree::User.find_by_id(params[:id])
-          unless user
-            return error_model(404, "User not found")
-          end
-          
-          # Get public favorites with product details
-          public_favorites = user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
-            {
-              id: fav.id,
-              variant_id: fav.variant_id,
-              product_id: fav.product&.id,
-              name: fav.product&.name,
-              slug: fav.product&.slug,
-              price: fav.variant&.price&.to_s
-            }
-          end
-          
-          # Check if current user is following this profile
-          is_following = @current_api_user.present? ? UserFollow.following?(@current_api_user, user) : false
-          
-          profile_data = {
-            id: user.id,
-            email: user.email,
-            first_name: user.bill_address&.firstname || "",
-            last_name: user.bill_address&.lastname || "",
-            followers_count: user.followers.count,
-            following_count: user.followings.count,
-            is_following: is_following,
-            public_favorites: public_favorites
-          }
-          
-          singular_success_model(200, "User profile retrieved successfully", profile_data)
+          return error_model(404, "User not found") unless user
+          render_profile(user)
+        end
+
+        def profile_by_handle
+          handle = params[:handle].to_s.downcase
+          user = Spree::User.find_by(display_name: handle)
+          return error_model(404, "User not found") unless user
+          render_profile(user)
         end
         
         swagger_path "/users/{id}/follow" do
@@ -428,6 +406,62 @@ module Spree
 
         def user_params
           params.require(:user).permit(:email, :password, :password_confirmation)
+        end
+
+        private
+
+        def render_profile(user)
+          public_favorites = user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
+            {
+              id: fav.id,
+              variant_id: fav.variant_id,
+              product_id: fav.product&.id,
+              name: fav.product&.name,
+              slug: fav.product&.slug,
+              price: fav.variant&.price&.to_s
+            }
+          end
+
+          is_following = @current_api_user.present? ? UserFollow.following?(@current_api_user, user) : false
+
+          socials = {
+            instagram: user.instagram,
+            tiktok: user.tiktok,
+            youtube: user.youtube,
+            soundcloud: user.soundcloud,
+            bandcamp: user.bandcamp
+          }
+          socials = socials.respond_to?(:compact_blank) ? socials.compact_blank : socials.reject { |_, v| v.blank? }
+
+          profile_data = {
+            id: user.id,
+            email: user.email,
+            first_name: user.bill_address&.firstname || "",
+            last_name: user.bill_address&.lastname || "",
+            display_name: user.display_name,
+            is_creator: user.is_creator,
+            bio: user.bio,
+            avatar_url: user.avatar_url,
+            banner_url: user.banner_url,
+            website: user.website,
+            socials: socials,
+            followers_count: user.followers.count,
+            following_count: user.followings.count,
+            is_following: is_following,
+            public_favorites: public_favorites,
+            recent_streams: user.is_creator ? fetch_recent_streams(user) : []
+          }
+
+          singular_success_model(200, "User profile retrieved successfully", profile_data)
+        end
+
+        def fetch_recent_streams(user)
+          return [] unless user.respond_to?(:live_streams)
+          user.live_streams
+              .where.not(ended_at: nil)
+              .order(ended_at: :desc)
+              .limit(6)
+              .map { |s| { id: s.id, title: s.try(:title), thumbnail_url: s.try(:thumbnail_url), ended_at: s.ended_at } }
         end
 
       end
