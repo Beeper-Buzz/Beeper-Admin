@@ -1,0 +1,93 @@
+<!-- insert_after "[data-hook='admin_user_form_fields']" -->
+<fieldset class="no-border-bottom">
+  <legend align="center">Creator Profile</legend>
+
+  <div class="row">
+    <div class="col-12">
+      <%= f.field_container :is_creator do %>
+        <label>
+          <%= f.check_box :is_creator %>
+          Creator (enables public profile enhancements)
+        </label>
+        <small class="form-text text-muted">
+          Creator status grants access to bio, banner, and social fields on their public profile. Requires display_name.
+        </small>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <%= f.field_container :display_name do %>
+        <%= f.label :display_name, "Display Name (handle)" %>
+        <%= f.text_field :display_name, class: "form-control" %>
+      <% end %>
+    </div>
+    <div class="col-6">
+      <%= f.field_container :website do %>
+        <%= f.label :website %>
+        <%= f.url_field :website, class: "form-control", placeholder: "https://example.com" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <%= f.field_container :bio do %>
+        <%= f.label :bio %>
+        <%= f.text_area :bio, class: "form-control", rows: 3, maxlength: 280 %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <%= f.field_container :avatar_url do %>
+        <%= f.label :avatar_url %>
+        <%= f.url_field :avatar_url, class: "form-control", placeholder: "https://..." %>
+      <% end %>
+    </div>
+    <div class="col-6">
+      <%= f.field_container :banner_url do %>
+        <%= f.label :banner_url %>
+        <%= f.url_field :banner_url, class: "form-control", placeholder: "https://..." %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-4">
+      <%= f.field_container :instagram do %>
+        <%= f.label :instagram %>
+        <%= f.text_field :instagram, class: "form-control", placeholder: "handle" %>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <%= f.field_container :tiktok do %>
+        <%= f.label :tiktok %>
+        <%= f.text_field :tiktok, class: "form-control", placeholder: "handle" %>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <%= f.field_container :youtube do %>
+        <%= f.label :youtube %>
+        <%= f.text_field :youtube, class: "form-control", placeholder: "handle" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <%= f.field_container :soundcloud do %>
+        <%= f.label :soundcloud %>
+        <%= f.text_field :soundcloud, class: "form-control", placeholder: "handle" %>
+      <% end %>
+    </div>
+    <div class="col-6">
+      <%= f.field_container :bandcamp do %>
+        <%= f.label :bandcamp %>
+        <%= f.text_field :bandcamp, class: "form-control", placeholder: "handle" %>
+      <% end %>
+    </div>
+  </div>
+</fieldset>
