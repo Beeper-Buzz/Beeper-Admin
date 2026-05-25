@@ -1,0 +1,129 @@
+<% content_for :page_title do %>
+  App Settings &amp; Version Gate
+<% end %>
+
+<%# ── Current Active Version ─────────────────────────────────────── %>
+<div class="row mb-4">
+  <div class="col-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h2 class="text-primary"><%= @current.version %></h2>
+        <small class="text-muted">Minimum Required Version</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h2><%= @current.platform %></h2>
+        <small class="text-muted">Platform</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h2><%= @current.build || '—' %></h2>
+        <small class="text-muted">Build</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# ── Create New Version Requirement ─────────────────────────────── %>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Set Minimum Required Version</h5>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">
+      Users running an app version below this will be forced to update.
+      The latest (most recently updated) record is used as the active gate.
+    </p>
+    <%= form_for AppSetting.new, url: admin_app_settings_path, method: :post do |f| %>
+      <div class="row">
+        <div class="col-3">
+          <div class="form-group">
+            <%= f.label :version, 'Version (semver)', class: 'control-label' %>
+            <%= f.text_field :version, class: 'form-control', placeholder: '1.0.0', required: true %>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <%= f.label :build, 'Build Number (optional)', class: 'control-label' %>
+            <%= f.text_field :build, class: 'form-control', placeholder: '42' %>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <%= f.label :platform, 'Platform', class: 'control-label' %>
+            <%= f.select :platform, [['iOS & Android', 'ios-android'], ['iOS Only', 'ios'], ['Android Only', 'android']], {}, class: 'form-control' %>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <%= f.label :name, 'App Identifier', class: 'control-label' %>
+            <%= f.text_field :name, class: 'form-control', value: 'com.beeper.Buzz' %>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <%= f.submit 'Set Version Gate', class: 'btn btn-primary',
+            data: { confirm: 'Are you sure? Users below this version will be blocked from using the app.' } %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%# ── Version History ─────────────────────────────────────────────── %>
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Version History</h5>
+  </div>
+  <div class="card-body p-0">
+    <% if @settings.any? %>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <th>ID</th>
+            <th>Version</th>
+            <th>Build</th>
+            <th>Platform</th>
+            <th>App ID</th>
+            <th>Updated</th>
+            <th>Created</th>
+            <th class="actions text-right">Action</th>
+          </thead>
+          <tbody>
+            <% @settings.each do |setting| %>
+              <tr class="<%= 'table-active' if setting == @current %>">
+                <td><%= setting.id %></td>
+                <td>
+                  <strong><%= setting.version %></strong>
+                  <% if setting == @current %>
+                    <span class="badge badge-success">Active</span>
+                  <% end %>
+                </td>
+                <td><%= setting.build || '—' %></td>
+                <td><%= setting.platform %></td>
+                <td><code><%= setting.name %></code></td>
+                <td><%= setting.updated_at.strftime('%b %d, %Y %H:%M') %></td>
+                <td><%= setting.created_at.strftime('%b %d, %Y %H:%M') %></td>
+                <td class="actions text-right">
+                  <%= button_to 'Delete', admin_app_setting_path(setting),
+                      method: :delete,
+                      class: 'btn btn-danger btn-sm',
+                      data: { confirm: "Delete version #{setting.version}?" } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="alert alert-info m-3">
+        No version gates configured. The app will run without version restrictions.
+      </div>
+    <% end %>
+  </div>
+</div>

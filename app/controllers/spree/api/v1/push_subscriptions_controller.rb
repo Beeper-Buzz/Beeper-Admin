@@ -58,7 +58,17 @@ module Spree
         private
 
         def current_api_user
-          @current_api_user ||= Spree::User.find_by(spree_api_key: request.headers['X-Spree-Token'] || params[:token])
+          @current_api_user ||= begin
+            # Support Bearer token (OAuth / Doorkeeper)
+            if request.headers['Authorization']&.start_with?('Bearer ')
+              bearer = request.headers['Authorization'].split(' ', 2).last
+              token = Spree::OauthAccessToken.find_by(token: bearer)
+              Spree::User.find_by(id: token&.resource_owner_id) if token && !token.expired?
+            else
+              # Fallback to X-Spree-Token (API key)
+              Spree::User.find_by(spree_api_key: request.headers['X-Spree-Token'] || params[:token])
+            end
+          end
         end
 
         def authenticate_user

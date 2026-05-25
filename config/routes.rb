@@ -42,6 +42,7 @@ Spree::Core::Engine.add_routes do
     end
     
     resources :contacts
+    resources :app_settings, only: [:index, :create, :destroy]
     resources :threads do
       member do
         get :conversation
