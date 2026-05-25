@@ -1,6 +1,7 @@
 Rails.application.config.after_initialize do
   if defined?(Spree::Backend::Config)
-    Spree::Backend::Config.configure do |config|
+    config = Spree::Backend::Config
+    if config.respond_to?(:menu_items)
       config.menu_items << Spree::BackendConfiguration::MenuItem.new(
         label: :push_notifications,
         icon: 'bell.svg',
