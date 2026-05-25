@@ -106,6 +106,11 @@ Spree::Core::Engine.add_routes do
       resources :contacts
       resources :messages
       resources :push_subscriptions, only: [:create, :destroy]
+      resources :app_settings, only: [] do
+        collection do
+          get :latest
+        end
+      end
       resources :threads
       resources :menu_items do
         member do
