@@ -48,6 +48,13 @@ Spree::Core::Engine.add_routes do
       end
     end
 
+    resources :push_notifications, only: [:index] do
+      collection do
+        post :send_notification
+        post :notify_product
+      end
+    end
+
     resources :menu_locations do
       resources :menu_items
     end
@@ -98,6 +105,7 @@ Spree::Core::Engine.add_routes do
       resources :pages, only: [:index, :show], controller: 'pages', param: :slug
       resources :contacts
       resources :messages
+      resources :push_subscriptions, only: [:create, :destroy]
       resources :threads
       resources :menu_items do
         member do
