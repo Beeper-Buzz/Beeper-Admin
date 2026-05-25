@@ -40,7 +40,7 @@ gem "aws-sdk-s3", '~> 1.96'
 
 gem "net-http"
 
-gem 'spree', github: '1instinct/spree', branch: 'instinct-dna'
+gem 'spree', github: '1instinct/spree', branch: '4-2-stable'
 gem 'spree_auth_devise', '~> 4.3'
 gem 'spree_gateway', '~> 3.9'
 # Extensions disabled due to version conflicts with spree 4.3.0.alpha fork
