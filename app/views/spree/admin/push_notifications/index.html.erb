@@ -98,10 +98,12 @@
             <%= select_tag :screen,
                 options_for_select([
                   ['None', ''],
+                  ['Home', 'Home'],
+                  ['Dashboard', 'Dashboard'],
                   ['Shop', 'Shop'],
                   ['Product Detail', 'ProductDetail'],
-                  ['Dashboard', 'Dashboard'],
                   ['Cart', 'Cart'],
+                  ['Social', 'Social'],
                   ['Profile', 'Profile']
                 ]),
                 class: 'form-control' %>
