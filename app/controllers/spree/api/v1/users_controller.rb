@@ -35,6 +35,13 @@ module Spree
               key :required, true
               key :type, :string
             end
+            parameter do
+              key :name, 'user[city]'
+              key :in, :formData
+              key :description, 'city (free-text, optional)'
+              key :required, false
+              key :type, :string
+            end
             response 200 do
               key :description, "Successfull"
               schema do
@@ -74,6 +81,9 @@ module Spree
           property :email do
             key :type, :string
           end
+          property :city do
+            key :type, :string
+          end
         end
         def sign_up
           @user = Spree::User.find_by_email(params[:user][:email])
@@ -92,7 +102,8 @@ module Spree
           response_data = {
             id: @user.id || 0,
             spree_api_key: @user.spree_api_key || "",
-            email: @user.email || ""
+            email: @user.email || "",
+            city: @user.city || ""
           }
           singular_success_model(200,  Spree.t('user.success.sign_up'), response_data)
         end
@@ -142,8 +153,9 @@ module Spree
             response_data = {
               id: @user.id || 0,
               spree_api_key: @user.spree_api_key || "",
-              email: @user.email || ""
-            }            
+              email: @user.email || "",
+              city: @user.city || ""
+            }
             singular_success_model(200,  Spree.t('user.success.sign_in'), response_data)
           end
         end
@@ -208,6 +220,9 @@ module Spree
             key :type, :string
           end
           property :last_name do
+            key :type, :string
+          end
+          property :city do
             key :type, :string
           end
           property :followers_count do
@@ -275,6 +290,7 @@ module Spree
             email: user.email,
             first_name: user.bill_address&.firstname || "",
             last_name: user.bill_address&.lastname || "",
+            city: user.city || "",
             followers_count: user.followers.count,
             following_count: user.followings.count,
             is_following: is_following,
@@ -427,7 +443,7 @@ module Spree
         end
 
         def user_params
-          params.require(:user).permit(:email, :password, :password_confirmation)
+          params.require(:user).permit(:email, :password, :password_confirmation, :city)
         end
 
       end
