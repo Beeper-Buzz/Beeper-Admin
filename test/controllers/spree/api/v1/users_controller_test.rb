@@ -77,4 +77,39 @@ class Spree::Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 404, body["response_code"]
     assert_equal "User not found", body["response_message"]
   end
+
+  test "POST /api/v1/users/sign_up keeps the city and returns it" do
+    email = "city#{SecureRandom.hex(4)}@example.com"
+    post "/api/v1/users/sign_up.json", params: { user: { email: email, password: "password123", password_confirmation: "password123", city: "Brooklyn" } }
+    assert_response :success
+    data = JSON.parse(response.body)["response_data"]
+    assert_equal "Brooklyn", data["city"]
+    assert_equal "Brooklyn", Spree::User.find_by(email: email).city
+  ensure
+    Spree::User.find_by(email: email)&.destroy
+  end
+
+  test "POST /api/v1/users/sign_up without a city returns an empty one" do
+    email = "nocity#{SecureRandom.hex(4)}@example.com"
+    post "/api/v1/users/sign_up.json", params: { user: { email: email, password: "password123", password_confirmation: "password123" } }
+    assert_response :success
+    assert_equal "", JSON.parse(response.body)["response_data"]["city"]
+  ensure
+    Spree::User.find_by(email: email)&.destroy
+  end
+
+  test "POST /api/v1/users/sign_in returns the city" do
+    @non_creator.update!(city: "Detroit")
+    post "/api/v1/users/sign_in.json", params: { user: { email: @non_creator.email, password: "password123" } }
+    assert_response :success
+    assert_equal "Detroit", JSON.parse(response.body)["response_data"]["city"]
+    @non_creator.reload # sign_in saves a new api key, which bumps lock_version
+  end
+
+  test "GET /api/v1/users/:id/profile never shows the city" do
+    @creator.update!(city: "Detroit")
+    get "/api/v1/users/#{@creator.id}/profile.json"
+    assert_response :success
+    refute JSON.parse(response.body)["response_data"].key?("city")
+  end
 end
