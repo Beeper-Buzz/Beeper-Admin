@@ -57,20 +57,10 @@ module Spree
 
         private
 
-        def current_api_user
-          @current_api_user ||= begin
-            # Support Bearer token (OAuth / Doorkeeper)
-            if request.headers['Authorization']&.start_with?('Bearer ')
-              bearer = request.headers['Authorization'].split(' ', 2).last
-              token = Spree::OauthAccessToken.find_by(token: bearer)
-              Spree::User.find_by(id: token&.resource_owner_id) if token && !token.expired?
-            else
-              # Fallback to X-Spree-Token (API key)
-              Spree::User.find_by(spree_api_key: request.headers['X-Spree-Token'] || params[:token])
-            end
-          end
-        end
-
+        # current_api_user comes from Spree::Api::BaseController#load_user: a valid, unexpired,
+        # unrevoked OAuth bearer token, else the X-Spree-Token api key. (The old local lookup
+        # named Spree::OauthAccessToken, which doesn't exist on Spree 4.2, so every bearer request
+        # that reached it raised NameError and returned 500.)
         def authenticate_user
           unless current_api_user
             render json: { response_code: 401, response_message: 'Unauthorized' }, status: :unauthorized
