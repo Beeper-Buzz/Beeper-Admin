@@ -21,11 +21,15 @@ WORKDIR /beeper-admin
 COPY Gemfile /beeper-admin/Gemfile
 COPY Gemfile.lock /beeper-admin/Gemfile.lock
 
+# Install exactly what the committed Gemfile.lock pins. BUNDLE_FROZEN makes the
+# build fail if Gemfile and Gemfile.lock disagree instead of re-resolving to the
+# newest gems (an unpinned resolve once pulled json 3.x and broke migrations).
+ENV BUNDLE_FROZEN=true
 RUN gem install bundler -v 2.4.22 && bundle install
 
 COPY . /beeper-admin
 
-# Re-run bundle install to restore git source gems after COPY overwrites Gemfile.lock
+# Re-check the copied app against the lock (frozen: never rewrites Gemfile.lock)
 RUN bundle install
 
 EXPOSE 3000
