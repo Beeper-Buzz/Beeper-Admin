@@ -104,6 +104,8 @@ Spree::Core::Engine.add_routes do
       end
       get "users/by_handle/:handle/profile", to: "users#profile_by_handle"
       resources :pages, only: [:index, :show], controller: 'pages', param: :slug
+      # The signed-in user deletes their own account (OAuth bearer required).
+      resource :account, only: [:destroy], controller: 'account', defaults: { format: 'json' }
       resources :contacts
       resources :messages
       resources :push_subscriptions, only: [:create, :destroy]
