@@ -1,7 +1,18 @@
 require "test_helper"
 
 class Profiles::BeeperPresenterTest < ActiveSupport::TestCase
-  test "avatar falls back to spree_users.avatar_url when nothing is attached" do
+  setup do
+    @old_hosts = ENV["PROFILE_AVATAR_URL_HOSTS"]
+    ENV["PROFILE_AVATAR_URL_HOSTS"] = "cdn.example.com"
+    Profiles.reset_config!
+  end
+
+  teardown do
+    ENV["PROFILE_AVATAR_URL_HOSTS"] = @old_hosts
+    Profiles.reset_config!
+  end
+
+  test "avatar falls back to spree_users.avatar_url on an allowed host when nothing is attached" do
     user = create(:user)
     user.update_columns(avatar_url: "https://cdn.example.com/a.png")
     profile = create(:user_profile, user: user, handle: "fallback")

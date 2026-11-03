@@ -439,7 +439,11 @@ module Spree
             return error_model(404, "User not found")
           end
 
-          public_favorites = user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
+          # A private profile shows handle, name and photo to anyone but its owner. The blanked
+          # keys stay so the web's page keeps working.
+          restricted = profile.present? && !profile.public_visibility? && @current_api_user&.id != user.id
+
+          public_favorites = restricted ? [] : user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
             {
               id: fav.id,
               variant_id: fav.variant_id,
@@ -460,6 +464,7 @@ module Spree
             bandcamp: user.bandcamp
           }
           socials = socials.respond_to?(:compact_blank) ? socials.compact_blank : socials.reject { |_, v| v.blank? }
+          socials = {} if restricted
 
           profile_data = {
             # Public profile: anyone can read it. Never put email, billing names,
@@ -470,19 +475,25 @@ module Spree
             last_name: "",
             display_name: user.display_name,
             is_creator: user.is_creator,
-            bio: user.bio,
-            avatar_url: (profile && Profiles::Presenter.new(profile, base_url: request.base_url).avatar&.dig(:large)) || user.avatar_url,
-            banner_url: user.banner_url,
-            website: user.website,
+            bio: restricted ? nil : user.bio,
+            avatar_url: public_avatar_url(user, profile),
+            banner_url: restricted ? nil : user.banner_url,
+            website: restricted ? nil : user.website,
             socials: socials,
             followers_count: user.followers.count,
             following_count: user.followings.count,
             is_following: is_following,
             public_favorites: public_favorites,
-            recent_streams: user.is_creator ? fetch_recent_streams(user) : []
+            recent_streams: user.is_creator && !restricted ? fetch_recent_streams(user) : []
           }
 
           singular_success_model(200, "User profile retrieved successfully", profile_data)
+        end
+
+        # The uploaded avatar, else spree_users.avatar_url when its host is on the allow-list.
+        def public_avatar_url(user, profile)
+          uploaded = profile && Profiles::Presenter.new(profile, base_url: request.base_url).avatar&.dig(:large)
+          uploaded || (user.avatar_url if Profiles.config.avatar_url_allowed?(user.avatar_url))
         end
 
         def fetch_recent_streams(user)
