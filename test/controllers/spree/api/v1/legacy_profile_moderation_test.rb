@@ -34,6 +34,9 @@ class Spree::Api::V1::LegacyProfileModerationTest < ActionDispatch::IntegrationT
 
   test "avatar_url prefers the uploaded avatar" do
     @user.update_columns(avatar_url: "https://cdn.example.com/old.png")
+    old_hosts = ENV["PROFILE_AVATAR_URL_HOSTS"]
+    ENV["PROFILE_AVATAR_URL_HOSTS"] = "cdn.example.com"
+    Profiles.reset_config!
     get "/api/v1/users/by_handle/webby/profile.json"
     assert_equal "https://cdn.example.com/old.png", JSON.parse(response.body)["response_data"]["avatar_url"]
 
@@ -41,5 +44,8 @@ class Spree::Api::V1::LegacyProfileModerationTest < ActionDispatch::IntegrationT
     get "/api/v1/users/by_handle/webby/profile.json"
     url = JSON.parse(response.body)["response_data"]["avatar_url"]
     assert_includes url, "/rails/active_storage/representations/"
+  ensure
+    ENV["PROFILE_AVATAR_URL_HOSTS"] = old_hosts
+    Profiles.reset_config!
   end
 end
