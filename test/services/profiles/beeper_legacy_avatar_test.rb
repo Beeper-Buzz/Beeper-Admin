@@ -78,6 +78,26 @@ class Profiles::BeeperLegacyAvatarTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.avatar_url
   end
 
+  test "DELETE avatar clears the legacy URL when the user has no profile row" do
+    plain = create(:user)
+    plain.update_columns(avatar_url: URL)
+
+    delete "/api/v1/profile/avatar", headers: auth(plain)
+
+    assert_response :success
+    assert_nil plain.reload.avatar_url
+    assert_nil json["avatar"]
+  end
+
+  test "the owner's GET /profile shows their legacy avatar whatever its host, https only" do
+    get "/api/v1/profile.json", headers: auth(@user)
+    assert_equal({ "small" => URL, "large" => URL }, json["avatar"])
+
+    @user.update_columns(avatar_url: "http://cdn.example.com/a.png")
+    get "/api/v1/profile.json", headers: auth(@user)
+    assert_nil json["avatar"]
+  end
+
   test "the report snapshot records a legacy avatar" do
     snapshot = Spree::ContentReport.profile_snapshot(@profile)
 
