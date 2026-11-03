@@ -14,8 +14,15 @@ module Profiles
       profile.update_columns(hidden_at: nil, hidden_reason: nil, updated_at: Time.current)
     end
 
+    # Inline: a queued purge is lost on a dyno restart and the photo would stay in storage. The
+    # attachment goes first, so the photo stops being served even if storage then fails. An app's
+    # external avatar URL column, if it has one, is cleared too.
     def remove_photo(profile)
-      profile.avatar.purge_later if profile.avatar.attached?
+      user = profile.user
+      user.update_columns(avatar_url: nil, updated_at: Time.current) if user&.has_attribute?(:avatar_url) && user.avatar_url.present?
+      profile.avatar.purge if profile.avatar.attached?
+    rescue StandardError => e
+      Rails.logger.error("[profiles] profile_id=#{profile.id} photo purge failed: #{e.class}")
     end
 
     def clear_bio(profile)

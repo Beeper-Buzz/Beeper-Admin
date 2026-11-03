@@ -6,10 +6,12 @@ module Spree
       #   GET    /api/v1/blocks           200 [{ handle, name, avatar }] (newest first)
       #   POST   /api/v1/blocks { handle } 201 { handle, name, avatar } (idempotent); 404 unknown; 422 self
       #   DELETE /api/v1/blocks/:handle   204; 404 when the user has no such block
+      #   POST and DELETE answer 429 over the limit.
       class BlocksController < Spree::Api::BaseController
         include Profiles::ApiResponses
 
         before_action :require_bearer_user
+        before_action -> { enforce_rate_limit(:block) }, only: %i[create destroy]
 
         def index
           blocks = Spree::UserBlock.where(blocker_id: current_api_user.id).order(created_at: :desc, id: :desc)
@@ -42,7 +44,7 @@ module Spree
         # Any live user's profile (hidden ones included, so people can block them too).
         def blockable_profile(handle)
           Spree::UserProfile.with_handle.joins(:user).where(Spree::User.table_name => { deleted_at: nil })
-                            .where('lower(handle) = ?', Profiles::HandlePolicy.normalize(handle)).first
+                            .by_handle(handle).first
         end
       end
     end
