@@ -7,6 +7,26 @@ class Spree::Api::V2::Storefront::AccountProfileDelegationTest < ActionDispatch:
     @user = create(:user)
   end
 
+  test "a creator with no handle can save the web form, which always sends display_name" do
+    @user.update_columns(is_creator: true)
+    patch "/api/v2/storefront/account", headers: auth(@user), params: {
+      user: { display_name: "", bio: "from the form" }
+    }, as: :json
+
+    assert_response :success
+    assert_equal "from the form", @user.reload.profile.bio
+    assert_nil @user.profile.handle
+  end
+
+  test "a creator can't clear an existing handle through the web form" do
+    @user.update_columns(is_creator: true)
+    create(:user_profile, user: @user, handle: "keeps_it")
+    patch "/api/v2/storefront/account", headers: auth(@user), params: { user: { display_name: "" } }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "keeps_it", Spree::UserProfile.find_by(user_id: @user.id).handle
+  end
+
   test "PATCH /api/v2/storefront/account updates the profile" do
     patch "/api/v2/storefront/account", headers: auth(@user), params: {
       user: { display_name: "Web_Handle", bio: "from the web", website: "https://web.example", instagram: "@webig" }

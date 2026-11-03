@@ -13,7 +13,7 @@ class Spree::UserDecoratorTest < ActiveSupport::TestCase
   def creator_without_handle(profile: true)
     user = create(:user, password: "password123", password_confirmation: "password123")
     user.update_columns(is_creator: true)
-    create(:user_profile, user: user, bio: "still here") if profile
+    create(:user_profile, user: user, handle: nil, bio: "still here") if profile
     Spree::User.find(user.id)
   end
 
@@ -25,6 +25,21 @@ class Spree::UserDecoratorTest < ActiveSupport::TestCase
       user.generate_spree_api_key!
       assert user.reload.spree_api_key.present?
     end
+  end
+
+  test "the forms' blank display_name counts as unchanged for a creator with no handle" do
+    [creator_without_handle, creator_without_handle(profile: false)].each do |user|
+      assert user.update(display_name: "", bio: "edited in a form"), user.errors.full_messages.join(", ")
+      user = Spree::User.find(user.id)
+      assert_nil user.display_name
+      assert_equal "edited in a form", user.bio
+    end
+  end
+
+  test "an existing creator with no handle can pick one through the form" do
+    user = creator_without_handle
+    assert user.update(display_name: "picked_one"), user.errors.full_messages.join(", ")
+    assert_equal "picked_one", Spree::User.find(user.id).display_name
   end
 
   test "an existing creator with no handle can edit the rest of their profile" do
