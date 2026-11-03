@@ -56,12 +56,21 @@ class LegacyCreatorProfiles
     drop_refused(profile, user)
     return false unless pending?(profile) && profile.valid?
 
+    gained = gained_value?(profile)
     # A savepoint: the migration runs in one transaction, which a failed statement would abort.
     Spree::UserProfile.transaction(requires_new: true) { profile.save! }
-    true
+    gained
   rescue ActiveRecord::RecordNotUnique
     @logger.warn("[legacy_creator_profiles] user_id=#{user.id} skipped: handle already used")
     false
+  end
+
+  # A row whose every legacy value was refused still saves, but isn't a copy. Keep this in step
+  # with the migration's "copied N" log line, which the deploy notes tell the operator to check.
+  def gained_value?(profile)
+    %w[handle bio website links].any? do |field|
+      profile.public_send(field).presence != profile.attribute_in_database(field).presence
+    end
   end
 
   def pending?(profile)

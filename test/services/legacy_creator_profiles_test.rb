@@ -60,6 +60,20 @@ class LegacyCreatorProfilesTest < ActiveSupport::TestCase
     assert_equal "ok_handle", profile_of(other).handle
   end
 
+  test "the count covers only rows that gained a value" do
+    legacy_user(display_name: "gains_one")
+    legacy_user(display_name: "admin")
+    legacy_user(website: "nope")
+    legacy_user(bio: "b" * 300)
+    legacy_user(instagram: "i" * 101)
+    io = StringIO.new
+
+    assert_equal 1, LegacyCreatorProfiles.copy!(logger: Logger.new(io))
+
+    assert_includes io.string, "copied 1 profiles"
+    assert_equal 5, Spree::UserProfile.count, "refused-only users still get their empty row, as before"
+  end
+
   test "skips soft-deleted users" do
     gone = legacy_user(display_name: "gone_user", deleted_at: Time.current)
 
