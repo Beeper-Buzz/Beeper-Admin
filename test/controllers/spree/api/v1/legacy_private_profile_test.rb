@@ -9,6 +9,8 @@ class Spree::Api::V1::LegacyPrivateProfileTest < ActionDispatch::IntegrationTest
     @profile = create(:user_profile, user: @owner, handle: "privy", bio: "secret bio", website: "https://p.example",
                                      visibility: "private", links: { "instagram" => "privy_ig" })
     create_public_favorite(@owner, name: "Secret Fav")
+    UserFollow.create!(follower: create(:user), following: @owner)
+    UserFollow.create!(follower: @owner, following: create(:user))
   end
 
   def by_handle(headers: {})
@@ -22,6 +24,8 @@ class Spree::Api::V1::LegacyPrivateProfileTest < ActionDispatch::IntegrationTest
   end
 
   def assert_blanked(data)
+    assert_equal 0, data["followers_count"]
+    assert_equal 0, data["following_count"]
     assert_nil data["bio"]
     assert_nil data["website"]
     assert_nil data["banner_url"]
@@ -54,6 +58,8 @@ class Spree::Api::V1::LegacyPrivateProfileTest < ActionDispatch::IntegrationTest
       assert_equal "https://cdn.example.com/banner.png", data["banner_url"]
       assert_equal({ "instagram" => "privy_ig" }, data["socials"])
       assert_equal 1, data["public_favorites"].size
+      assert_equal 1, data["followers_count"]
+      assert_equal 1, data["following_count"]
     end
   end
 
@@ -63,5 +69,7 @@ class Spree::Api::V1::LegacyPrivateProfileTest < ActionDispatch::IntegrationTest
     assert_equal "secret bio", data["bio"]
     assert_equal({ "instagram" => "privy_ig" }, data["socials"])
     assert_equal 1, data["public_favorites"].size
+    assert_equal 1, data["followers_count"]
+    assert_equal 1, data["following_count"]
   end
 end
