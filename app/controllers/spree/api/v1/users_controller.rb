@@ -363,6 +363,7 @@ module Spree
         end
         
         def follow
+          return follow_needs_user unless @current_api_user&.persisted?
           return follow_limit_reached unless Profiles::RateLimit.allow?(@current_api_user, :follow)
 
           user_to_follow = Spree::User.find_by_id(params[:id])
@@ -401,6 +402,7 @@ module Spree
         end
         
         def unfollow
+          return follow_needs_user unless @current_api_user&.persisted?
           return follow_limit_reached unless Profiles::RateLimit.allow?(@current_api_user, :follow)
 
           user_to_unfollow = Spree::User.find_by_id(params[:id])
@@ -419,6 +421,11 @@ module Spree
           else
             error_model(400, "Not following this user")
           end
+        end
+
+        # A guest order token authenticates as an unsaved user, who can't follow anyone.
+        def follow_needs_user
+          error_model(401, "Sign in to follow users")
         end
 
         def follow_limit_reached
