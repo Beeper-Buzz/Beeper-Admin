@@ -434,10 +434,12 @@ module Spree
           socials = socials.respond_to?(:compact_blank) ? socials.compact_blank : socials.reject { |_, v| v.blank? }
 
           profile_data = {
+            # Public profile: anyone can read it. Never put email, billing names,
+            # phone or addresses here. The empty keys stay for older web clients.
             id: user.id,
-            email: user.email,
-            first_name: user.bill_address&.firstname || "",
-            last_name: user.bill_address&.lastname || "",
+            email: "",
+            first_name: "",
+            last_name: "",
             display_name: user.display_name,
             is_creator: user.is_creator,
             bio: user.bio,
