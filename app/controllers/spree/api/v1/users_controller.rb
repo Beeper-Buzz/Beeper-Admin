@@ -256,8 +256,7 @@ module Spree
         end
 
         def profile_by_handle
-          handle = params[:handle].to_s.downcase
-          user = Spree::User.find_by(display_name: handle)
+          user = Spree::UserProfile.find_by_handle(params[:handle])&.user
           return error_model(404, "User not found") unless user
           render_profile(user)
         end
@@ -367,6 +366,10 @@ module Spree
           if @current_api_user.id == user_to_follow.id
             return error_model(400, "Cannot follow yourself")
           end
+
+          if Spree::UserBlock.between?(@current_api_user, user_to_follow)
+            return error_model(403, "Cannot follow this user")
+          end
           
           # Check if already following
           if UserFollow.following?(@current_api_user, user_to_follow)
@@ -411,6 +414,13 @@ module Spree
         private
 
         def render_profile(user)
+          # Hidden or locked profiles, and viewers in a block either way, get a 404.
+          profile = user.profile
+          if profile&.hidden? || user.account_locked? ||
+             (@current_api_user&.persisted? && Spree::UserBlock.between?(@current_api_user, user))
+            return error_model(404, "User not found")
+          end
+
           public_favorites = user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
             {
               id: fav.id,
@@ -443,7 +453,7 @@ module Spree
             display_name: user.display_name,
             is_creator: user.is_creator,
             bio: user.bio,
-            avatar_url: user.avatar_url,
+            avatar_url: (profile && Profiles::Presenter.new(profile, base_url: request.base_url).avatar&.dig(:large)) || user.avatar_url,
             banner_url: user.banner_url,
             website: user.website,
             socials: socials,
