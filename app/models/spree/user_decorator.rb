@@ -18,7 +18,7 @@ module Spree
 
     def self.prepended(base)
       base.class_eval do
-        validates :display_name, presence: true, if: :is_creator?
+        validates :display_name, presence: true, if: :creator_handle_required?
 
         validates :avatar_url, :banner_url,
           format: { with: %r{\Ahttps://}, message: "must start with https://" },
@@ -71,6 +71,14 @@ module Spree
     end
 
     private
+
+    # Only when the creator flag or the handle is changing. A creator whose legacy handle the
+    # rules refused has none until they pick one, and must still be able to sign in and save.
+    def creator_handle_required?
+      return false unless is_creator?
+
+      new_record? || is_creator_changed? || profile&.handle_changed?
+    end
 
     def delegated_profile
       profile || build_profile
