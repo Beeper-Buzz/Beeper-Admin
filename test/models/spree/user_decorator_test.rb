@@ -81,6 +81,18 @@ class Spree::UserDecoratorTest < ActiveSupport::TestCase
     assert_equal :ok, Profiles::HandlePolicy.check("mybeeper", user: nil)
   end
 
+  test "an admin may set a beeper handle through display_name; a member may not" do
+    Profiles.reset_config!
+    admin = make_admin(create(:user))
+    admin.update(display_name: "beeperhq")
+    assert admin.errors.empty?, admin.errors.full_messages.join(", ")
+    assert_equal "beeperhq", admin.reload.profile.handle
+
+    member = create(:user)
+    refute member.update(display_name: "beeper123")
+    assert_includes member.errors[:display_name], "is reserved"
+  end
+
   test "allows nil display_name" do
     user = build_user(display_name: nil)
     assert user.valid?, user.errors.full_messages.join(", ")
