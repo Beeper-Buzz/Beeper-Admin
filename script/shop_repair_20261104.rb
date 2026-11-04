@@ -13,7 +13,7 @@
 # 4. Adds 34 to collections/featured at position 1.
 #
 # Aborts, changing nothing, if a product's id, slug or name is not the expected one, if 34 is
-# discontinued, if a taxon is missing, if 67 is on a completed order, or if an order that
+# discontinued or otherwise not available, if a taxon is missing, if 67 is on a completed order, or if an order that
 # would change is past checkout, has a payment in progress or a shipment past pending, or
 # holds a line not at 34's price (so no cart total changes). Safe to run again: done steps
 # are skipped. Prints counts and record ids only.
@@ -99,6 +99,7 @@ class ShopRepair20261104
     @reservation = check_product(RESERVATION_ID)
     @duplicate = check_product(DUPLICATE_ID)
     abort!("product #{RESERVATION_ID} is discontinued") if @reservation.discontinued?
+    abort!("product #{RESERVATION_ID} is not available") unless @reservation.available?
     @target_variant = @reservation.master
     abort!("product #{RESERVATION_ID} has no master variant") unless @target_variant
     abort!("product #{RESERVATION_ID} master variant is deleted") if @target_variant.deleted?

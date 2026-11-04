@@ -321,6 +321,17 @@ class ShopRepair20261104Test < ActiveSupport::TestCase
     assert_aborts_unchanged(/product 34 is discontinued/)
   end
 
+  # Moving carts and featuring a product the public can't reach would strand both.
+  test 'aborts when 34 has no available_on' do
+    @reservation.update_columns(available_on: nil)
+    assert_aborts_unchanged(/product 34 is not available/)
+  end
+
+  test 'aborts when 34 is available only in the future' do
+    @reservation.update_columns(available_on: 1.day.from_now)
+    assert_aborts_unchanged(/product 34 is not available/)
+  end
+
   # Two lines of 67 (two of its variants) in one order: the first is moved, the second merged
   # into it. The dry run must report what apply then does.
   test 'the dry run reports moves and merges exactly as apply performs them' do
