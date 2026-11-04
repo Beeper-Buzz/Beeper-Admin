@@ -12,9 +12,11 @@
 #    blob that another attachment still uses, so the two galleries stay independent.
 # 4. Adds 34 to collections/featured at position 1.
 #
-# Aborts, changing nothing, if a product's id, slug or name is not the expected one, if a
-# taxon is missing, or if 67 is on a completed order. Safe to run again: done steps are
-# skipped. Prints counts and record ids only.
+# Aborts, changing nothing, if a product's id, slug or name is not the expected one, if 34 is
+# discontinued, if a taxon is missing, if 67 is on a completed order, or if an order that
+# would change is past checkout, has a payment in progress or a shipment past pending, or
+# holds a line not at 34's price (so no cart total changes). Safe to run again: done steps
+# are skipped. Prints counts and record ids only.
 class ShopRepair20261104
   class Abort < StandardError; end
 
@@ -33,6 +35,9 @@ class ShopRepair20261104
   FEATURED_PERMALINK = 'collections/featured'.freeze
   PRE_ORDER_PERMALINK = 'collections/pre-order'.freeze
   ANIMATED_TYPES = %w[image/gif].freeze
+  # An order whose lines move must still be a cart in checkout, with no money in flight.
+  CHECKOUT_STATES = %w[cart address delivery payment confirm].freeze
+  IDLE_PAYMENT_STATES = %w[checkout failed void invalid].freeze
 
   attr_reader :apply, :out, :report
 
@@ -93,8 +98,10 @@ class ShopRepair20261104
     @device = check_product(DEVICE_ID)
     @reservation = check_product(RESERVATION_ID)
     @duplicate = check_product(DUPLICATE_ID)
+    abort!("product #{RESERVATION_ID} is discontinued") if @reservation.discontinued?
     @target_variant = @reservation.master
     abort!("product #{RESERVATION_ID} has no master variant") unless @target_variant
+    abort!("product #{RESERVATION_ID} master variant is deleted") if @target_variant.deleted?
 
     @featured = Spree::Taxon.find_by(permalink: FEATURED_PERMALINK)
     @pre_order = Spree::Taxon.find_by(permalink: PRE_ORDER_PERMALINK)
@@ -105,6 +112,7 @@ class ShopRepair20261104
     completed = Spree::LineItem.joins(:order).where(variant_id: @duplicate_variant_ids).
                 where.not(spree_orders: { completed_at: nil })
     abort!("product #{DUPLICATE_ID} is on #{completed.count} line item(s) of completed orders") if completed.exists?
+    check_orders!
 
     say "checks: ok (products #{DEVICE_ID}, #{RESERVATION_ID}, #{DUPLICATE_ID}; " \
         "taxons #{@featured.id}, #{@pre_order.id}; target variant #{@target_variant.id})"
@@ -121,6 +129,37 @@ class ShopRepair20261104
     abort!("product #{id} slug is not #{expected[:slug] || "#{expected[:slug_prefix]}..."}") unless slug_ok
     abort!("product #{id} name is not \"#{expected[:name]}\"") unless normalize(product.name) == normalize(expected[:name])
     product
+  end
+
+  # Every order that would change must be a plain cart in checkout: no payment beyond
+  # checkout/failed/void/invalid, no shipment past pending. Every line that ends up on 34's
+  # master (moved, merged, or already there) must be at 34's price in that order's currency,
+  # so no cart total changes.
+  def check_orders!
+    lines_to_move.group_by(&:order).each do |order, lines|
+      unless CHECKOUT_STATES.include?(order.state)
+        abort!("order #{order.id} is in state #{order.state}, not a checkout state")
+      end
+      busy = order.payments.reject { |payment| IDLE_PAYMENT_STATES.include?(payment.state) }
+      abort!("order #{order.id} has #{busy.size} payment(s) in progress") if busy.any?
+      if order.shipments.any? { |shipment| shipment.state != 'pending' }
+        abort!("order #{order.id} has a shipment that is not pending")
+      end
+
+      price = target_price(order.currency)
+      abort!("variant #{@target_variant.id} has no #{order.currency} price (order #{order.id})") unless price
+      (lines + order.line_items.where(variant_id: @target_variant.id).to_a).each do |line|
+        next if line.price == price
+
+        abort!("line item #{line.id} is at #{line.price.to_f} but variant #{@target_variant.id} " \
+               "sells at #{price.to_f} in #{order.currency}")
+      end
+    end
+  end
+
+  # Looked up, not Variant#price_in, which builds an unsaved Price when there is none.
+  def target_price(currency)
+    @target_variant.prices.find_by(currency: currency.to_s.upcase)&.amount
   end
 
   # --- what would change ----------------------------------------------------------------
@@ -149,8 +188,23 @@ class ShopRepair20261104
     Spree::Classification.find_by(product_id: @reservation.id, taxon_id: @featured.id)
   end
 
+  # Per order, as move_line_items! does it: the first line of 67 moves when the order has no
+  # line of 34's master yet; every other line merges into that one.
+  def planned_moves_and_merges
+    moves = []
+    merges = []
+    lines_to_move.group_by(&:order_id).each do |order_id, lines|
+      has_target = Spree::LineItem.where(order_id: order_id, variant_id: @target_variant.id).exists?
+      lines.each do |line|
+        (has_target ? merges : moves) << line
+        has_target = true
+      end
+    end
+    [moves, merges]
+  end
+
   def plan!
-    moves, merges = lines_to_move.partition { |line| existing_target_line(line.order).nil? }
+    moves, merges = planned_moves_and_merges
     report[:line_items_moved] = moves.map(&:id)
     report[:line_items_merged] = merges.map(&:id)
     report[:orders_recalculated] = (moves + merges).map(&:order_id).uniq
@@ -191,8 +245,7 @@ class ShopRepair20261104
           target_line = existing
         else
           line.variant = @target_variant
-          price = @target_variant.price_in(order.currency)&.amount
-          line.price = price if price
+          line.price = target_price(order.currency) # equal to line.price: check_orders!
           line.cost_price = @target_variant.cost_price
           line.save!
           target_line = line
