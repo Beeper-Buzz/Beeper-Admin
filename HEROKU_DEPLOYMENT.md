@@ -149,7 +149,7 @@ git push heroku main:main
 
 The `heroku.yml` configuration will:
 - Build the Docker container
-- Run database migrations automatically (release phase)
+- Run `rails db:migrate` in a release dyno; a failed migration stops the release and the old code keeps serving
 - Start the Puma web server
 
 ### 6. Initialize Database
@@ -202,6 +202,9 @@ heroku run rails console -a $APP_NAME
 
 ### Run Database Migrations
 
+Deploys migrate on their own in the release phase (`release:` in `heroku.yml`), before the new code
+starts. To run them by hand:
+
 ```bash
 heroku run rails db:migrate -a $APP_NAME
 ```
@@ -213,6 +216,9 @@ heroku pg:info -a $APP_NAME
 ```
 
 ### Reset Database (⚠️ Destroys all data)
+
+Only for rebuilding an empty database: `db:schema:load` wipes every table. Deploys never use it;
+they migrate (above).
 
 ```bash
 heroku pg:reset DATABASE -a $APP_NAME --confirm $APP_NAME
@@ -262,10 +268,11 @@ heroku config:set RAILS_SERVE_STATIC_FILES=true -a $APP_NAME
 
 ### Migration errors
 
-If migrations fail during deployment, run them manually:
+A failed migration fails the release phase: the release is not created and the previous version
+keeps serving. Read the output, fix the cause and push again. To see it:
 ```bash
-heroku run rails db:migrate -a $APP_NAME
-heroku restart -a $APP_NAME
+heroku releases -a $APP_NAME
+heroku releases:output -a $APP_NAME
 ```
 
 ### Check app is running

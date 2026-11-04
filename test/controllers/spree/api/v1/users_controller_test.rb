@@ -10,7 +10,7 @@ class Spree::Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       email: "creator#{SecureRandom.hex(4)}@example.com",
       password: "password123",
       is_creator: true,
-      display_name: "beeper_test",
+      display_name: "nova_test",
       bio: "Making music",
       instagram: "beeper_buzz",
       website: "https://beeper.buzz"
@@ -41,7 +41,7 @@ class Spree::Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     data = JSON.parse(response.body)["response_data"]
     assert_equal true, data["is_creator"]
-    assert_equal "beeper_test", data["display_name"]
+    assert_equal "nova_test", data["display_name"]
     assert_equal "Making music", data["bio"]
     assert_equal "beeper_buzz", data["socials"]["instagram"]
     assert_equal "https://beeper.buzz", data["website"]
@@ -56,15 +56,15 @@ class Spree::Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/v1/users/by_handle/:handle/profile finds creator by handle" do
-    get "/api/v1/users/by_handle/beeper_test/profile.json"
+    get "/api/v1/users/by_handle/nova_test/profile.json"
     assert_response :success
     data = JSON.parse(response.body)["response_data"]
     assert_equal @creator.id, data["id"]
-    assert_equal "beeper_test", data["display_name"]
+    assert_equal "nova_test", data["display_name"]
   end
 
   test "GET /api/v1/users/by_handle/:handle/profile is case-insensitive" do
-    get "/api/v1/users/by_handle/Beeper_Test/profile.json"
+    get "/api/v1/users/by_handle/Nova_Test/profile.json"
     assert_response :success
     data = JSON.parse(response.body)["response_data"]
     assert_equal @creator.id, data["id"]

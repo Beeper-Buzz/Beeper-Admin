@@ -1,0 +1,35 @@
+# Beeper's own reserved handles, added to config/moderation/reserved_handles.yml.
+# Brand names, plus the beeper.buzz web routes (Beeper-Frontend serves beeper.buzz/<handle>, so a
+# handle must not shadow a page).
+- beeper
+- beeperbuzz
+- beeper_buzz
+- delta8
+- d8
+- team
+# web routes
+- cart
+- checkout
+- login
+- signup
+- account
+- browse
+- about
+- terms
+- privacy
+- home
+- reset-password
+- thank-you
+- update-email
+- update-password
+- api
+- admin
+- tv
+- user
+- images
+- fonts
+- static
+- assets
+- _next
+- creator-application
+- community-guidelines

@@ -137,6 +137,11 @@ module Spree
           if !@user.present? || !@user.valid_password?(params[:user][:password])
             error_model(401, Spree.t('user.error.email_password_unmatch'))
             return
+          elsif @user.account_locked?
+            # After the password check, so the lock isn't revealed to anyone else. A lock clears
+            # the api key, so issuing one here would undo it.
+            error_model(403, "This account is locked")
+            return
           else
             @user.generate_spree_api_key! if @user.spree_api_key.blank?
             response_data = {
@@ -256,8 +261,7 @@ module Spree
         end
 
         def profile_by_handle
-          handle = params[:handle].to_s.downcase
-          user = Spree::User.find_by(display_name: handle)
+          user = Spree::UserProfile.find_by_handle(params[:handle])&.user
           return error_model(404, "User not found") unless user
           render_profile(user)
         end
@@ -359,13 +363,25 @@ module Spree
         end
         
         def follow
+          return follow_needs_user unless @current_api_user&.persisted?
+          return follow_limit_reached unless Profiles::RateLimit.allow?(@current_api_user, :follow)
+
           user_to_follow = Spree::User.find_by_id(params[:id])
           unless user_to_follow
             return error_model(404, "User not found")
           end
           
+          # Same rule as the visible profile scope: hidden or locked targets don't exist here.
+          if user_to_follow.account_locked? || user_to_follow.profile&.hidden?
+            return error_model(404, "User not found")
+          end
+
           if @current_api_user.id == user_to_follow.id
             return error_model(400, "Cannot follow yourself")
+          end
+
+          if Spree::UserBlock.between?(@current_api_user, user_to_follow)
+            return error_model(403, "Cannot follow this user")
           end
           
           # Check if already following
@@ -386,6 +402,9 @@ module Spree
         end
         
         def unfollow
+          return follow_needs_user unless @current_api_user&.persisted?
+          return follow_limit_reached unless Profiles::RateLimit.allow?(@current_api_user, :follow)
+
           user_to_unfollow = Spree::User.find_by_id(params[:id])
           unless user_to_unfollow
             return error_model(404, "User not found")
@@ -404,6 +423,15 @@ module Spree
           end
         end
 
+        # A guest order token authenticates as an unsaved user, who can't follow anyone.
+        def follow_needs_user
+          error_model(401, "Sign in to follow users")
+        end
+
+        def follow_limit_reached
+          error_model(429, "Too many requests. Try again later.")
+        end
+
         def user_params
           params.require(:user).permit(:email, :password, :password_confirmation)
         end
@@ -411,7 +439,18 @@ module Spree
         private
 
         def render_profile(user)
-          public_favorites = user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
+          # Hidden or locked profiles, and viewers in a block either way, get a 404.
+          profile = user.profile
+          if profile&.hidden? || user.account_locked? ||
+             (@current_api_user&.persisted? && Spree::UserBlock.between?(@current_api_user, user))
+            return error_model(404, "User not found")
+          end
+
+          # A private profile shows handle, name and photo to anyone but its owner. The blanked
+          # keys stay so the web's page keeps working; so do id and is_creator, which it uses.
+          restricted = profile.present? && !profile.public_visibility? && @current_api_user&.id != user.id
+
+          public_favorites = restricted ? [] : user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
             {
               id: fav.id,
               variant_id: fav.variant_id,
@@ -432,6 +471,7 @@ module Spree
             bandcamp: user.bandcamp
           }
           socials = socials.respond_to?(:compact_blank) ? socials.compact_blank : socials.reject { |_, v| v.blank? }
+          socials = {} if restricted
 
           profile_data = {
             # Public profile: anyone can read it. Never put email, billing names,
@@ -442,19 +482,25 @@ module Spree
             last_name: "",
             display_name: user.display_name,
             is_creator: user.is_creator,
-            bio: user.bio,
-            avatar_url: user.avatar_url,
-            banner_url: user.banner_url,
-            website: user.website,
+            bio: restricted ? nil : user.bio,
+            avatar_url: public_avatar_url(user, profile),
+            banner_url: restricted ? nil : user.banner_url,
+            website: restricted ? nil : user.website,
             socials: socials,
-            followers_count: user.followers.count,
-            following_count: user.followings.count,
+            followers_count: restricted ? 0 : user.followers.count,
+            following_count: restricted ? 0 : user.followings.count,
             is_following: is_following,
             public_favorites: public_favorites,
-            recent_streams: user.is_creator ? fetch_recent_streams(user) : []
+            recent_streams: user.is_creator && !restricted ? fetch_recent_streams(user) : []
           }
 
           singular_success_model(200, "User profile retrieved successfully", profile_data)
+        end
+
+        # The uploaded avatar, else spree_users.avatar_url when its host is on the allow-list.
+        def public_avatar_url(user, profile)
+          uploaded = profile && Profiles::Presenter.new(profile, base_url: request.base_url).avatar&.dig(:large)
+          uploaded || (user.avatar_url if Profiles.config.avatar_url_allowed?(user.avatar_url))
         end
 
         def fetch_recent_streams(user)

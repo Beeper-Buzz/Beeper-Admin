@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_01_11_065155) do
+ActiveRecord::Schema.define(version: 2026_11_03_130000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -60,6 +60,15 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "app_settings", force: :cascade do |t|
+    t.string "name", default: "com.beeper.Buzz"
+    t.string "platform", default: "ios-android"
+    t.string "version", default: "0.0.0", null: false
+    t.string "build"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
   end
 
   create_table "contacts", force: :cascade do |t|
@@ -207,6 +216,40 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.index ["receiver_type", "receiver_id"], name: "index_messages_on_receiver"
     t.index ["sender_type", "sender_id"], name: "index_messages_on_sender"
     t.index ["thread_table_id"], name: "index_messages_on_thread_table_id"
+  end
+
+  create_table "push_notifications", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "body", null: false
+    t.string "notification_type", default: "custom"
+    t.jsonb "data", default: {}
+    t.string "target", default: "all"
+    t.bigint "target_user_id"
+    t.integer "sent_count", default: 0
+    t.integer "error_count", default: 0
+    t.text "errors_log"
+    t.string "status", default: "draft"
+    t.bigint "sent_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["notification_type"], name: "index_push_notifications_on_notification_type"
+    t.index ["sent_by_id"], name: "index_push_notifications_on_sent_by_id"
+    t.index ["status"], name: "index_push_notifications_on_status"
+    t.index ["target"], name: "index_push_notifications_on_target"
+  end
+
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", null: false
+    t.string "platform", null: false
+    t.string "device_name"
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["enabled"], name: "index_push_subscriptions_on_enabled"
+    t.index ["platform"], name: "index_push_subscriptions_on_platform"
+    t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "spree_addresses", id: :serial, force: :cascade do |t|
@@ -372,6 +415,24 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.index ["affiliate_id"], name: "index_spree_commissions_on_affiliate_id"
     t.index ["end_date"], name: "index_spree_commissions_on_end_date"
     t.index ["start_date"], name: "index_spree_commissions_on_start_date"
+  end
+
+  create_table "spree_content_reports", force: :cascade do |t|
+    t.integer "reporter_id"
+    t.string "reportable_type", null: false
+    t.bigint "reportable_id", null: false
+    t.string "reason", null: false
+    t.text "details"
+    t.jsonb "snapshot", default: {}, null: false
+    t.string "status", default: "open", null: false
+    t.integer "resolved_by_id"
+    t.datetime "resolved_at"
+    t.text "resolution_note"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["reportable_type", "reportable_id"], name: "index_spree_content_reports_on_reportable"
+    t.index ["reporter_id", "created_at"], name: "index_spree_content_reports_on_reporter_id_and_created_at"
+    t.index ["status", "created_at"], name: "index_spree_content_reports_on_status_and_created_at"
   end
 
   create_table "spree_countries", id: :serial, force: :cascade do |t|
@@ -844,6 +905,14 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.index ["product_id", "taxon_id"], name: "index_spree_products_taxons_on_product_id_and_taxon_id", unique: true
     t.index ["product_id"], name: "index_spree_products_taxons_on_product_id"
     t.index ["taxon_id"], name: "index_spree_products_taxons_on_taxon_id"
+  end
+
+  create_table "spree_profile_rate_counters", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "action", null: false
+    t.datetime "window_started_at", null: false
+    t.integer "hits", default: 0, null: false
+    t.index ["user_id", "action"], name: "index_spree_profile_rate_counters_on_user_id_and_action", unique: true
   end
 
   create_table "spree_promotion_action_line_items", id: :serial, force: :cascade do |t|
@@ -1445,6 +1514,31 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.index ["active"], name: "index_spree_trackers_on_active"
   end
 
+  create_table "spree_user_blocks", force: :cascade do |t|
+    t.integer "blocker_id", null: false
+    t.integer "blocked_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blocked_id"], name: "index_spree_user_blocks_on_blocked_id"
+    t.index ["blocker_id", "blocked_id"], name: "index_spree_user_blocks_on_blocker_id_and_blocked_id", unique: true
+  end
+
+  create_table "spree_user_profiles", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "handle"
+    t.string "name", limit: 40
+    t.text "bio"
+    t.string "website", limit: 200
+    t.jsonb "links", default: {}, null: false
+    t.string "visibility", default: "public", null: false
+    t.datetime "handle_changed_at"
+    t.datetime "hidden_at"
+    t.string "hidden_reason"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index "lower((handle)::text)", name: "index_spree_user_profiles_on_lower_handle", unique: true
+    t.index ["user_id"], name: "index_spree_user_profiles_on_user_id", unique: true
+  end
+
   create_table "spree_users", id: :serial, force: :cascade do |t|
     t.string "encrypted_password", limit: 128
     t.string "password_salt", limit: 128
@@ -1479,9 +1573,22 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
     t.boolean "referrer_benefit_enabled", default: true
     t.integer "loyalty_points_balance", default: 0, null: false
     t.integer "lock_version", default: 0, null: false
+    t.boolean "is_creator", default: false, null: false
+    t.string "display_name"
+    t.text "bio"
+    t.string "avatar_url"
+    t.string "banner_url"
+    t.string "website"
+    t.string "instagram"
+    t.string "tiktok"
+    t.string "youtube"
+    t.string "soundcloud"
+    t.string "bandcamp"
     t.index ["bill_address_id"], name: "index_spree_users_on_bill_address_id"
     t.index ["deleted_at"], name: "index_spree_users_on_deleted_at"
+    t.index ["display_name"], name: "index_spree_users_on_display_name", unique: true, where: "(display_name IS NOT NULL)"
     t.index ["email"], name: "email_idx_unique", unique: true
+    t.index ["is_creator"], name: "index_spree_users_on_is_creator", where: "(is_creator = true)"
     t.index ["ship_address_id"], name: "index_spree_users_on_ship_address_id"
     t.index ["spree_api_key"], name: "index_spree_users_on_spree_api_key"
   end
@@ -1557,6 +1664,13 @@ ActiveRecord::Schema.define(version: 2026_01_11_065155) do
   add_foreign_key "live_streams", "spree_users", column: "actor_id"
   add_foreign_key "live_streams", "thread_tables"
   add_foreign_key "messages", "thread_tables"
+  add_foreign_key "push_notifications", "spree_users", column: "sent_by_id"
+  add_foreign_key "push_subscriptions", "spree_users", column: "user_id"
+  add_foreign_key "spree_content_reports", "spree_users", column: "reporter_id", on_delete: :nullify
+  add_foreign_key "spree_content_reports", "spree_users", column: "resolved_by_id", on_delete: :nullify
   add_foreign_key "spree_oauth_access_grants", "spree_oauth_applications", column: "application_id"
   add_foreign_key "spree_oauth_access_tokens", "spree_oauth_applications", column: "application_id"
+  add_foreign_key "spree_user_blocks", "spree_users", column: "blocked_id"
+  add_foreign_key "spree_user_blocks", "spree_users", column: "blocker_id"
+  add_foreign_key "spree_user_profiles", "spree_users", column: "user_id"
 end
