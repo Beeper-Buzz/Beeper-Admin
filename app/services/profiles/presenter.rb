@@ -136,7 +136,7 @@ module Profiles
 
     def public_favorites
       user.favorites.public_favorites.recent
-          .joins(variant: :product).merge(Spree::Product.not_deleted)
+          .joins(variant: :product).merge(Spree::Product.publicly_visible)
           .includes(variant: { product: { master: :images } })
           .limit(Profiles.config.favorites_limit)
     end

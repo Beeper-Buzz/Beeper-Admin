@@ -50,7 +50,7 @@ module ProfilesTestHelper
                                    mail_from_address: 'store@example.com', default_currency: 'USD', default: true)
     end
     shipping_category = Spree::ShippingCategory.create!(name: "prof-#{SecureRandom.hex(4)}")
-    product = Spree::Product.new(name: name, price: price, shipping_category: shipping_category)
+    product = Spree::Product.new(name: name, price: price, available_on: 1.day.ago, shipping_category: shipping_category)
     product.stores << store if product.respond_to?(:stores)
     product.save!
     Favorite.create!(user: user, variant: product.master, is_public: true)

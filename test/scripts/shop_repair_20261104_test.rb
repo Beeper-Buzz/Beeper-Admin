@@ -168,6 +168,33 @@ class ShopRepair20261104Test < ActiveSupport::TestCase
     assert_equal 4, @device.reload.variant_images.count
   end
 
+  test 'after apply 34 is reachable, 67 is a 404, and hidden product 1 stays hidden with its images' do
+    device_images = @device.reload.variant_images.count
+    run_repair(apply: true)
+
+    assert @reservation.reload.available?
+    refute @duplicate.reload.available?
+    refute @device.reload.available?
+    assert_equal device_images, @device.variant_images.count
+
+    public_api = ActionDispatch::Integration::Session.new(Rails.application)
+    public_api.get '/api/v2/storefront/products/beeper-8-reservation?include=images'
+    assert_equal 200, public_api.response.status
+    body = JSON.parse(public_api.response.body)
+    assert_equal '34', body['data']['id']
+    assert_equal device_images, body['included'].count { |i| i['type'] == 'image' }
+
+    [@duplicate.slug, '67', 'beeper-8', '1'].each do |id|
+      public_api.get "/api/v2/storefront/products/#{id}"
+      assert_equal 404, public_api.response.status, id
+    end
+
+    public_api.get "/api/v2/storefront/taxons/#{@featured.permalink}"
+    ids = JSON.parse(public_api.response.body)['data']['relationships']['products']['data'].map { |p| p['id'] }
+    assert_includes ids, '34'
+    refute_includes ids, '1'
+  end
+
   test 'apply adds 34 to Featured at position 1' do
     run_repair(apply: true)
     ordered = Spree::Classification.where(taxon: @featured).order(:position).pluck(:product_id)
