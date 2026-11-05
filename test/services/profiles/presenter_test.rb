@@ -90,6 +90,21 @@ class Profiles::PresenterTest < ActiveSupport::TestCase
     assert_equal fav.variant.product.slug, item['slug']
   end
 
+  test 'a favorite on a product that is not available stays off the profile' do
+    no_date = create_public_favorite(@user, name: 'No Date')
+    no_date.variant.product.update!(available_on: nil)
+    future = create_public_favorite(@user, name: 'Future')
+    future.variant.product.update!(available_on: 1.week.from_now)
+    discontinued = create_public_favorite(@user, name: 'Discontinued')
+    discontinued.variant.product.update!(discontinue_on: 1.minute.from_now)
+    discontinued.variant.product.update_columns(discontinue_on: 1.minute.ago)
+    assert_equal [], present.public_json[:sections]
+
+    visible = create_public_favorite(@user, name: 'Visible')
+    data = present.public_json.as_json
+    assert_equal [visible.variant.product.id], data['favorites'].map { |f| f['product_id'] }
+  end
+
   test 'viewer state with a viewer who follows' do
     viewer = create(:user)
     UserFollow.create!(follower: viewer, following: @user)

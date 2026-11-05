@@ -450,7 +450,7 @@ module Spree
           # keys stay so the web's page keeps working; so do id and is_creator, which it uses.
           restricted = profile.present? && !profile.public_visibility? && @current_api_user&.id != user.id
 
-          public_favorites = restricted ? [] : user.favorites.public_favorites.includes(variant: :product).recent.map do |fav|
+          public_favorites = restricted ? [] : user.favorites.public_favorites.joins(variant: :product).merge(Spree::Product.publicly_visible).includes(variant: :product).recent.map do |fav|
             {
               id: fav.id,
               variant_id: fav.variant_id,
