@@ -66,6 +66,12 @@ gem 'rest-client'
 # Tool to create APi and it's documentation
 gem 'swagger-blocks'
 
+# Error + performance reporting (Sentry project: material-instinct-llc/beeper-admin).
+# Unpinned on purpose so bundler resolves a version compatible with ruby '2.7.2'
+# above; newer sentry-ruby releases require Ruby 3.
+gem 'sentry-ruby'
+gem 'sentry-rails'
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'dotenv-rails'

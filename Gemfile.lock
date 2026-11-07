@@ -325,6 +325,7 @@ GEM
       rake
     mini_magick (4.13.2)
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (5.26.1)
     monetize (1.13.0)
       money (~> 6.12)
@@ -344,6 +345,9 @@ GEM
       net-protocol
     netrc (0.11.0)
     nio4r (2.7.5)
+    nokogiri (1.15.7)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.15.7-x86_64-linux)
       racc (~> 1.4)
     orm_adapter (0.5.0)
@@ -450,6 +454,13 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
+    sentry-rails (7.2.0)
+      railties (>= 5.2.0)
+      sentry-ruby (~> 7.2.0)
+    sentry-ruby (7.2.0)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      logger
     spree_auth_devise (4.3.4)
       devise (~> 4.7)
       devise-encryptable (= 0.2.0)
@@ -530,6 +541,7 @@ GEM
     zeitwerk (2.6.18)
 
 PLATFORMS
+  ruby
   x86_64-linux
 
 DEPENDENCIES
@@ -558,6 +570,8 @@ DEPENDENCIES
   sass-rails (>= 5.0)
   sassc-rails
   selenium-webdriver
+  sentry-rails
+  sentry-ruby
   spree!
   spree_auth_devise (~> 4.3)
   spree_gateway (~> 3.9)
@@ -574,4 +588,4 @@ RUBY VERSION
    ruby 2.7.2p137
 
 BUNDLED WITH
-   2.4.22
+   2.4.13
