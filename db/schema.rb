@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_11_04_120000) do
+ActiveRecord::Schema.define(version: 2026_11_08_120000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -1593,6 +1593,7 @@ ActiveRecord::Schema.define(version: 2026_11_04_120000) do
     t.string "youtube"
     t.string "soundcloud"
     t.string "bandcamp"
+    t.string "city"
     t.index ["bill_address_id"], name: "index_spree_users_on_bill_address_id"
     t.index ["deleted_at"], name: "index_spree_users_on_deleted_at"
     t.index ["display_name"], name: "index_spree_users_on_display_name", unique: true, where: "(display_name IS NOT NULL)"
