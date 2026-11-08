@@ -3,7 +3,9 @@ module Spree
     class AppSettingsController < Spree::Admin::BaseController
       def index
         @settings = AppSetting.order(updated_at: :desc)
-        @current = AppSetting.latest
+        @ios = AppSetting.latest_for('ios')
+        @android = AppSetting.latest_for('android')
+        @legacy = AppSetting.latest
       end
 
       def create
@@ -28,7 +30,7 @@ module Spree
       private
 
       def setting_params
-        params.require(:app_setting).permit(:name, :platform, :version, :build)
+        params.require(:app_setting).permit(:name, :platform, :version, :build, :allow_ahead_of_store)
       end
     end
   end
