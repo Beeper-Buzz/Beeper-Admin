@@ -1,3 +1,12 @@
+# The Docker image build runs `assets:precompile` with ASSETS_PRECOMPILE=1 and
+# no database (see Dockerfile). Spree reads and writes preferences in the
+# database at boot (the setter below, Spree::Auth::Config[:confirmable] in
+# Spree::User), so turn that persistence off for that one process: preferences
+# fall back to their defaults and nothing connects. Spree's own guard for a
+# missing database rescues PG::ConnectionBad, but Rails 6.1 wraps it in
+# ActiveRecord::ConnectionNotEstablished, so it doesn't catch this.
+Spree::Preferences::Store.instance.persistence = false if ENV['ASSETS_PRECOMPILE'] == '1'
+
 # Configure Spree Preferences
 #
 # Note: Initializing preferences available within the Admin will overwrite any changes that were made through the user interface when you restart.

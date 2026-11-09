@@ -148,9 +148,10 @@ git push heroku main:main
 ```
 
 The `heroku.yml` configuration will:
-- Build the Docker container
+- Build the Docker container, precompiling the Sprockets assets into `public/assets` inside the image
+  (the build has no config vars, so the precompile must not need the database or any credentials)
 - Run `rails db:migrate` in a release dyno; a failed migration stops the release and the old code keeps serving
-- Start the Puma web server
+- Start the Puma web server (it serves the prebuilt assets; it never precompiles on boot)
 
 ### 6. Initialize Database
 
