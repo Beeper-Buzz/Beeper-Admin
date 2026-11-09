@@ -12,4 +12,4 @@ release:
   command:
     - bundle exec rails db:migrate
 run:
-  web: bash -c "bundle exec rake assets:precompile & bundle exec rails server -b 0.0.0.0 -p $PORT"
+  web: bash -c "bundle exec rails server -b 0.0.0.0 -p $PORT"
