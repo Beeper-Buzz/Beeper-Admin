@@ -1,0 +1,231 @@
+<% content_for :page_title do %>
+  <%= link_to 'Firmware', spree.admin_firmware_bundles_path %> &raquo; <%= @bundle.label %>
+<% end %>
+
+<% content_for :page_actions do %>
+  <%= link_to 'Edit', spree.edit_admin_firmware_bundle_path(@bundle), class: 'btn btn-outline-secondary', id: 'edit_firmware_bundle' %>
+  <% if @bundle.draft? %>
+    <%= button_to 'Publish', spree.publish_admin_firmware_bundle_path(@bundle), method: :post, class: 'btn btn-success', form_class: 'd-inline',
+                  id: 'publish_firmware_bundle',
+                  data: { confirm: "Publish #{@bundle.label} at #{@bundle.rollout_percent}% rollout? Its images can't change afterwards." } %>
+    <%= button_to 'Delete draft', spree.admin_firmware_bundle_path(@bundle), method: :delete, class: 'btn btn-outline-danger', form_class: 'd-inline',
+                  id: 'delete_firmware_bundle', data: { confirm: "Delete the draft #{@bundle.label}?" } %>
+  <% end %>
+  <% if @bundle.published? %>
+    <%= button_to 'Pause (kill switch)', spree.pause_admin_firmware_bundle_path(@bundle), method: :post, class: 'btn btn-warning', form_class: 'd-inline',
+                  id: 'pause_firmware_bundle', data: { confirm: "Stop offering #{@bundle.label} to every device now?" } %>
+  <% end %>
+  <% if @bundle.paused? %>
+    <%= button_to 'Resume', spree.publish_admin_firmware_bundle_path(@bundle), method: :post, class: 'btn btn-success', form_class: 'd-inline',
+                  id: 'resume_firmware_bundle', data: { confirm: "Offer #{@bundle.label} again at #{@bundle.rollout_percent}%?" } %>
+  <% end %>
+  <% if @bundle.published? || @bundle.paused? %>
+    <%= button_to 'Revoke', spree.revoke_admin_firmware_bundle_path(@bundle), method: :post, class: 'btn btn-danger', form_class: 'd-inline',
+                  id: 'revoke_firmware_bundle',
+                  data: { confirm: "Revoke #{@bundle.label}? Devices on it are told so and offered the newest good bundle. This can't be undone." } %>
+  <% end %>
+<% end %>
+
+<div class="row">
+  <div class="col-12 col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">
+        <h1 class="card-title mb-0 h5 mr-2"><%= @bundle.hw_rev %> <%= @bundle.version %></h1>
+        <%= firmware_state_badge(@bundle) %>
+        <span class="ml-auto text-muted"><%= @bundle.channel %> &middot; <%= @bundle.rollout_percent %>% rollout</span>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Minimum app version</dt><dd class="col-sm-8"><%= @bundle.min_app_version || 'none' %></dd>
+          <dt class="col-sm-4">Security epoch</dt><dd class="col-sm-8"><%= @bundle.security_epoch %></dd>
+          <dt class="col-sm-4">Published</dt><dd class="col-sm-8"><%= @bundle.published_at ? l(@bundle.published_at, format: :long) : 'not yet' %></dd>
+          <dt class="col-sm-4">Created by</dt><dd class="col-sm-8"><%= @bundle.created_by || '—' %></dd>
+        </dl>
+        <% if @bundle.release_notes.present? %>
+          <hr>
+          <div style="white-space: pre-wrap;" id="firmware_release_notes"><%= @bundle.release_notes %></div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title mb-0 h5">Images (install order)</h2></div>
+      <div class="card-body p-0">
+        <% if @images.any? %>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0" id="firmware_images">
+              <thead>
+                <tr><th>Component</th><th>Version</th><th>Size</th><th>SHA-256</th><th>Key</th><th>Protocols</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% @images.sort_by { |i| Firmware::COMPONENTS.index(i.component) }.each do |image| %>
+                  <tr id="firmware_image_<%= image.id %>">
+                    <td><strong><%= image.component %></strong></td>
+                    <td><%= image.version %></td>
+                    <td class="text-nowrap"><%= number_to_human_size(image.size) %></td>
+                    <td><%= firmware_short_hash(image.sha256) %></td>
+                    <td><code><%= image.signature_key_id %></code></td>
+                    <td class="text-nowrap">
+                      <%= "link #{image.link_proto}" if image.link_proto %>
+                      <%= "app #{image.app_proto}" if image.app_proto %>
+                      <%= firmware_short_hash(image.content_hash, 8) if image.content_hash %>
+                    </td>
+                    <td class="text-nowrap text-right">
+                      <% if image.file.attached? %>
+                        <%= link_to 'Download', main_app.rails_blob_path(image.file, disposition: 'attachment'), class: 'btn btn-sm btn-light' %>
+                      <% end %>
+                      <% if @bundle.editable? %>
+                        <%= button_to 'Remove', spree.admin_firmware_bundle_firmware_image_path(@bundle, image), method: :delete,
+                                      class: 'btn btn-sm btn-outline-danger', form_class: 'd-inline',
+                                      data: { confirm: "Remove #{image.component} from this draft?" } %>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <p class="m-3 text-muted">No images yet.</p>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @new_image %>
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title mb-0 h5">Add an image</h2></div>
+        <div class="card-body">
+          <%= form_with model: @new_image, url: spree.admin_firmware_bundle_firmware_images_path(@bundle), method: :post, local: true,
+                        multipart: true, id: 'firmware_image_form' do |f| %>
+            <div class="row">
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :component, 'Component' %>
+                  <%= f.select :component, Firmware::COMPONENTS, {}, class: 'form-control' %>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :version, 'Image version' %>
+                  <%= f.text_field :version, class: 'form-control', placeholder: '1.4.0', required: true %>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :signature_key_id, 'Signing key id' %>
+                  <%= f.text_field :signature_key_id, class: 'form-control', placeholder: 'stm32-release', required: true %>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :link_proto, 'link_proto' %>
+                  <%= f.number_field :link_proto, class: 'form-control', min: 0 %>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :app_proto, 'app_proto' %>
+                  <%= f.number_field :app_proto, class: 'form-control', min: 0 %>
+                </div>
+              </div>
+              <div class="col-6 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :content_hash, 'Assets content hash (optional)' %>
+                  <%= f.text_field :content_hash, class: 'form-control' %>
+                </div>
+              </div>
+              <div class="col-12 col-lg-8">
+                <div class="form-group">
+                  <%= f.label :sha256, 'Expected SHA-256 (optional, checked against the file)' %>
+                  <%= f.text_field :sha256, class: 'form-control', placeholder: 'from the build output' %>
+                </div>
+              </div>
+              <div class="col-12 col-lg-4">
+                <div class="form-group">
+                  <%= f.label :file, 'Signed image file' %>
+                  <%= f.file_field :file, class: 'form-control-file', required: true %>
+                </div>
+              </div>
+            </div>
+            <%= f.submit 'Upload image', class: 'btn btn-primary' %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title mb-0 h5">Rollout</h2></div>
+      <div class="card-body">
+        <%= form_with model: @bundle, url: spree.admin_firmware_bundle_path(@bundle), method: :patch, local: true, id: 'firmware_rollout_form' do |f| %>
+          <div class="form-group">
+            <%= f.label :rollout_percent, 'Rollout %' %>
+            <%= f.number_field :rollout_percent, class: 'form-control', min: 0, max: 100 %>
+            <small class="form-text text-muted">Devices are bucketed by their hashed id, so raising it only adds devices.</small>
+          </div>
+          <div class="form-group">
+            <%= f.label :channel, 'Channel' %>
+            <%= f.select :channel, Firmware::CHANNELS, {}, class: 'form-control' %>
+          </div>
+          <%= f.submit 'Save rollout', class: 'btn btn-primary' %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title mb-0 h5">Install reports</h2></div>
+      <div class="card-body" id="firmware_report_counts">
+        <% if @result_counts.any? %>
+          <p>
+            <% FirmwareReport::RESULTS.each do |result| %>
+              <%= firmware_result_badge(result, @result_counts[result] || 0) %>
+            <% end %>
+          </p>
+          <% if @stage_counts.any? %>
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Component</th><th>Stage</th><th>Result</th><th class="text-right">Count</th></tr></thead>
+              <tbody>
+                <% @stage_counts.sort_by { |_, count| -count }.each do |(component, stage, result), count| %>
+                  <tr><td><%= component || '—' %></td><td><%= stage || '—' %></td><td><%= firmware_result_badge(result) %></td><td class="text-right"><%= count %></td></tr>
+                <% end %>
+              </tbody>
+            </table>
+          <% end %>
+        <% else %>
+          <p class="mb-0 text-muted">No reports yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @reports.any? %>
+  <div class="card mb-3">
+    <div class="card-header"><h2 class="card-title mb-0 h5">Latest reports</h2></div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0" id="firmware_reports">
+          <thead>
+            <tr><th>Date</th><th>Device</th><th>Component</th><th>From → to</th><th>Result</th><th>Stage</th><th>Error</th><th>Duration</th><th>Client</th></tr>
+          </thead>
+          <tbody>
+            <% @reports.each do |report| %>
+              <tr id="firmware_report_<%= report.id %>">
+                <td class="text-nowrap"><%= l(report.created_at, format: :short) %></td>
+                <td><%= firmware_short_hash(report.device_hash, 8) %></td>
+                <td><%= report.component %></td>
+                <td class="text-nowrap"><%= report.from_version %> → <%= report.to_version %></td>
+                <td><%= firmware_result_badge(report.result) %></td>
+                <td><%= report.stage %></td>
+                <td><%= report.error_code %></td>
+                <td><%= report.duration_ms ? "#{(report.duration_ms / 1000.0).round(1)} s" : '' %></td>
+                <td class="text-nowrap"><%= [report.platform, report.app_version, report.phone_model].compact.join(' ') %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>

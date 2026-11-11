@@ -196,3 +196,17 @@ Spree::Core::Engine.add_routes do
     end
   end
 end
+
+# Device firmware releases: the admin's Firmware tab. See app/services/firmware.rb.
+Spree::Core::Engine.add_routes do
+  namespace :admin, path: Spree.admin_path do
+    resources :firmware_bundles, path: 'firmware' do
+      member do
+        post :publish
+        post :pause
+        post :revoke
+      end
+      resources :firmware_images, path: 'images', only: %i[create destroy]
+    end
+  end
+end

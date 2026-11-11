@@ -1,0 +1,88 @@
+<% content_for :page_title do %>
+  Firmware
+<% end %>
+
+<% content_for :page_actions do %>
+  <%= link_to 'New draft bundle', spree.new_admin_firmware_bundle_path, class: 'btn btn-success', id: 'new_firmware_bundle' %>
+<% end %>
+
+<% content_for :table_filter do %>
+  <div data-hook="admin_firmware_bundles_filter">
+    <%= form_tag spree.admin_firmware_bundles_path, method: :get do %>
+      <div class="row">
+        <div class="col-6 col-lg-3">
+          <div class="form-group">
+            <%= label_tag :hw_rev, 'Hardware' %>
+            <%= select_tag :hw_rev, options_for_select(@hw_revs, @filters[:hw_rev]), include_blank: 'All', class: 'form-control' %>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="form-group">
+            <%= label_tag :channel, 'Channel' %>
+            <%= select_tag :channel, options_for_select(Firmware::CHANNELS, @filters[:channel]), include_blank: 'All', class: 'form-control' %>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="form-group">
+            <%= label_tag :state, 'State' %>
+            <%= select_tag :state, options_for_select(FirmwareBundle::STATES, @filters[:state]), include_blank: 'All', class: 'form-control' %>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <%= button Spree.t(:filter_results), 'search.svg' %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<p class="text-muted">
+  <small>
+    A bundle is one tested set of images for one hardware revision. Devices are offered the newest
+    published bundle on their channel (beta also gets stable) whose rollout includes them. Pause is
+    the kill switch: nobody is offered a paused bundle.
+  </small>
+</p>
+
+<% if @bundles.any? %>
+  <div class="table-responsive">
+    <table class="table table-sm" id="listing_firmware_bundles">
+      <thead>
+        <tr>
+          <th>Hardware</th>
+          <th>Version</th>
+          <th>Channel</th>
+          <th>State</th>
+          <th>Rollout</th>
+          <th>Min app</th>
+          <th>Images</th>
+          <th>Reports</th>
+          <th>Published</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @bundles.each do |bundle| %>
+          <tr id="firmware_bundle_<%= bundle.id %>">
+            <td><%= bundle.hw_rev %></td>
+            <td><%= link_to bundle.version, spree.admin_firmware_bundle_path(bundle), class: 'font-weight-bold' %></td>
+            <td><%= bundle.channel %></td>
+            <td><%= firmware_state_badge(bundle) %></td>
+            <td><%= bundle.rollout_percent %>%</td>
+            <td><%= bundle.min_app_version || '—' %></td>
+            <td class="text-nowrap"><%= bundle.images.map { |i| "#{i.component} #{i.version}" }.join(', ').presence || '—' %></td>
+            <td class="text-nowrap">
+              <% FirmwareReport::RESULTS.each do |result| %>
+                <% count = @report_counts[[bundle.id, result]] %>
+                <%= firmware_result_badge(result, count) if count %>
+              <% end %>
+            </td>
+            <td class="text-nowrap"><%= bundle.published_at ? l(bundle.published_at, format: :short) : '—' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <%= paginate @bundles %>
+<% else %>
+  <div class="alert alert-info no-objects-found">No firmware bundles yet.</div>
+<% end %>
