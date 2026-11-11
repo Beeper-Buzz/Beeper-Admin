@@ -16,6 +16,10 @@ module Firmware
       @url_expires_in = 1.hour
       # Fixed windows, see Firmware::RateLimit.
       @rate_limits = {
+        # check with a device hash: per device, and a loose ceiling per IP (carrier NAT puts many
+        # phones behind one address); without one: the strict per-IP limit.
+        check_device: { limit: 240, window: 1.hour },
+        check_ip_shared: { limit: 2000, window: 1.hour },
         check_ip: { limit: 240, window: 1.hour },
         report_ip: { limit: 120, window: 1.hour },
         report_device: { limit: 100, window: 24.hours }

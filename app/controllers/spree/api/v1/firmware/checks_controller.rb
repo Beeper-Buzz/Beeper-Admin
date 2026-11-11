@@ -5,10 +5,15 @@ module Spree
         # GET /api/v1/firmware/check?hw=V114&channel=stable&device=<hash>&app_version=2.7.0
         #     &stm32=1.4.0&stm32_assets=1.4.0&nrf_app=1.2.0&nrf_net=1.2.0
         #
-        # No auth (devices of signed-out users update too); rate-limited per IP. hw is required;
-        # channel is stable, beta or internal (default stable); device is the device's hashed id
-        # (64 hex; without it only 100 % rollouts are offered); a missing component version means
-        # "unknown", so that image is offered. See ::Firmware::Offer for how the bundle is chosen.
+        #     &security_epoch=2   (optional; or per component: stm32_epoch, nrf_app_epoch, ...)
+        #
+        # No auth (devices of signed-out users update too). Rate-limited per device when device is
+        # sent (with a loose per-IP ceiling for shared carrier NAT addresses), else strictly per IP.
+        # hw is required; channel is stable, beta or internal (default stable); device is the
+        # device's hashed id (64 hex; without it only 100 % rollouts are offered); a missing
+        # component version means "unknown", so that image is offered. The highest reported epoch
+        # is a floor: no bundle of a lower security_epoch is offered. See ::Firmware::Offer for how
+        # the bundle is chosen.
         #
         # 200 {
         #   bundle: null | { id, hw, version, channel, security_epoch, min_app_version, notes,
@@ -22,10 +27,12 @@ module Spree
         class ChecksController < ActionController::API
           include ::Firmware::ApiResponses
 
+          EPOCH_FORMAT = /\A\d{1,9}\z/.freeze
+
           def show
             query = check_params
             return if performed?
-            return render_error('Too many requests. Try again later.', :too_many_requests) if rate_limited?(check_ip: ::Firmware::RateLimit.ip_key(request.remote_ip))
+            return render_error('Too many requests. Try again later.', :too_many_requests) if rate_limited?(rate_keys(query[:device_hash]))
 
             ActiveStorage::Current.host = request.base_url
             response.headers['Cache-Control'] = 'no-store'
@@ -33,6 +40,28 @@ module Spree
           end
 
           private
+
+          # With a device hash: per device, plus a loose per-IP ceiling (many phones share one
+          # carrier NAT address). Without one: the strict per-IP limit.
+          def rate_keys(device_hash)
+            ip = ::Firmware::RateLimit.ip_key(request.remote_ip)
+            device_hash ? { check_device: device_hash, check_ip_shared: ip } : { check_ip: ip }
+          end
+
+          # The highest of security_epoch and <component>_epoch, as an Integer, or nil when none was
+          # sent. Records a field error for a value that isn't a small non-negative integer.
+          def reported_epoch(errors)
+            names = [:security_epoch] + ::Firmware::COMPONENTS.map { |component| :"#{component}_epoch" }
+            epochs = names.filter_map do |name|
+              value = string_param(name)
+              next unless value
+              next value.to_i if EPOCH_FORMAT.match?(value)
+
+              errors[name] = ['must be a non-negative integer']
+              nil
+            end
+            epochs.max
+          end
 
           def check_params
             errors = {}
@@ -52,12 +81,14 @@ module Spree
               errors[component.to_sym] = ['is too long'] if value.length > VERSION_PARAM_MAX
               map[component] = value
             end
+            epoch = reported_epoch(errors)
             if errors.any?
               field, messages = errors.first
               return render_error("#{field} #{messages.first}", :unprocessable_entity, fields: errors)
             end
 
-            { hw_rev: hw, channel: channel, device_hash: device, app_version: app_version, current_versions: current }
+            { hw_rev: hw, channel: channel, device_hash: device, app_version: app_version, current_versions: current,
+              security_epoch: epoch }
           end
 
           def present(offer)

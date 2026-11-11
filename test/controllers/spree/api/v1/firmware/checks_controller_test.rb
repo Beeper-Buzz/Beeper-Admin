@@ -104,6 +104,40 @@ class Spree::Api::V1::Firmware::ChecksControllerTest < ActionDispatch::Integrati
     assert_equal '1.4.1', offered, 'an older bundle of the same epoch is the way back'
   end
 
+  test 'a reported security epoch is a floor, also when the versions match no known bundle' do
+    create_firmware_bundle(version: '1.3.0', images: OLD.merge('stm32' => '1.3.0', 'stm32_assets' => '1.3.0'),
+                           security_epoch: 1)
+    unknown = OLD.merge('stm32' => '9.9.9-dev', 'stm32_assets' => '9.9.9-dev')
+
+    check(unknown)
+    assert_equal '1.3.0', offered, 'no epoch sent: unknown versions keep the old behaviour'
+
+    check(unknown.merge(security_epoch: 2))
+    assert_nil json['bundle'], 'its bootloaders would refuse epoch 1'
+
+    check(unknown.merge(stm32_epoch: '2', nrf_app_epoch: '0'))
+    assert_nil json['bundle'], 'the highest per-component epoch counts'
+
+    check(unknown.merge(security_epoch: 1))
+    assert_equal '1.3.0', offered, 'the same epoch is fine'
+
+    create_firmware_bundle(version: '1.4.0', images: OLD, security_epoch: 2)
+    check(OLD.merge('stm32' => '1.3.0', 'stm32_assets' => '1.3.0', security_epoch: 3))
+    assert_nil json['bundle'], 'the reported epoch wins over the current bundle when higher'
+    check(OLD.merge('stm32' => '1.3.0', 'stm32_assets' => '1.3.0', security_epoch: 2))
+    assert_equal '1.4.0', offered
+  end
+
+  test 'a bad security epoch is 422' do
+    check(security_epoch: '-1')
+    assert_response :unprocessable_entity
+    assert json['fields']['security_epoch'].any?
+
+    check(nrf_net_epoch: 'two')
+    assert_response :unprocessable_entity
+    assert json['fields']['nrf_net_epoch'].any?
+  end
+
   test 'a malformed bundle version never breaks check' do
     create_firmware_bundle(version: '1.4.0', images: OLD)
     bad = FirmwareBundle.create!(hw_rev: 'V114', version: '1.9.0', channel: 'stable', rollout_percent: 100)
@@ -209,13 +243,36 @@ class Spree::Api::V1::Firmware::ChecksControllerTest < ActionDispatch::Integrati
     assert_response :unprocessable_entity
   end
 
-  test 'rate-limited per IP' do
+  test 'without a device hash: rate-limited strictly per IP' do
     Firmware.config.rate_limits[:check_ip] = { limit: 2, window: 1.hour }
-    2.times { check }
+    2.times { check(device: nil) }
+    assert_response :success
+    check(device: nil)
+    assert_response :too_many_requests
+    check({ device: nil }, 'REMOTE_ADDR' => '198.51.100.4')
     assert_response :success
     check
-    assert_response :too_many_requests
-    check({}, 'REMOTE_ADDR' => '198.51.100.4')
+    assert_response :success, 'a device-hashed check is not held to the strict per-IP limit'
+  end
+
+  test 'with a device hash: rate-limited per device, with a loose ceiling per IP (carrier NAT)' do
+    Firmware.config.rate_limits[:check_ip] = { limit: 1, window: 1.hour }
+    Firmware.config.rate_limits[:check_device] = { limit: 2, window: 1.hour }
+    Firmware.config.rate_limits[:check_ip_shared] = { limit: 4, window: 1.hour }
+    devices = (1..4).map { |i| Digest::SHA256.hexdigest("nat-device-#{i}") }
+
+    2.times { check(device: devices[0]) }
+    assert_response :success, 'many checks from one IP pass when they carry device hashes'
+    check(device: devices[0])
+    assert_response :too_many_requests, 'one device is held to its own limit'
+    check(device: devices[1])
+    assert_response :success, 'another device behind the same IP is not'
+
+    check(device: devices[2])
+    assert_response :success
+    check(device: devices[3])
+    assert_response :too_many_requests, 'the per-IP ceiling still holds'
+    check({ device: devices[3] }, 'REMOTE_ADDR' => '198.51.100.4')
     assert_response :success
   end
 

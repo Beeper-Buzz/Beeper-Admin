@@ -193,13 +193,24 @@ images are MCUboot images with an ECDSA P-256 signature of the declared version.
 
 | | Auth | What |
 |---|---|---|
-| `GET /api/v1/firmware/check?hw=V114&channel=stable&device=<hash>&app_version=2.7.0&stm32=1.4.0&stm32_assets=1.4.0&nrf_app=1.2.0&nrf_net=1.1.0` | none (rate-limited per IP) | `{ bundle: null \| { id, version, notes, min_app_version, images: [{ component, version, size, sha256, signature_key_id, url, url_expires_at, ... }] }, app_update_required, min_app_version, revoked }`. Images are only the ones that changed, in install order (`nrf_net`, `nrf_app`, `stm32_assets`, `stm32`). |
+| `GET /api/v1/firmware/check?hw=V114&channel=stable&device=<hash>&app_version=2.7.0&stm32=1.4.0&stm32_assets=1.4.0&nrf_app=1.2.0&nrf_net=1.1.0&security_epoch=1` | none (rate-limited per device, see below) | `{ bundle: null \| { id, version, notes, min_app_version, images: [{ component, version, size, sha256, signature_key_id, url, url_expires_at, ... }] }, app_update_required, min_app_version, revoked }`. Images are only the ones that changed, in install order (`nrf_net`, `nrf_app`, `stm32_assets`, `stm32`). |
 | `POST /api/v1/firmware/reports` | optional bearer (links the user) | one install result: `device`, `bundle_id`, `component`, `from_version`, `to_version`, `result` (`ok`/`failed`/`rolled_back`/`aborted`), `stage`, `error_code`, `duration_ms`, `app_version`, `platform`, `phone_model` |
 | `POST /api/v1/admin/firmware/bundles` | `Authorization: Bearer $FIRMWARE_UPLOAD_TOKEN` | CI creates a **draft** (multipart; see the controller's header comment) |
 
 `device` is the device's own SHA-256 of its unique ID (64 hex); the raw ID never reaches the
 server. A device is in a rollout when `SHA-256("<device>:<bundle version>")` (first 8 bytes,
 big-endian) mod 100 is below `rollout_percent`; raising the percentage only adds devices.
+
+`security_epoch` (optional; or per component: `stm32_epoch`, `stm32_assets_epoch`, `nrf_app_epoch`,
+`nrf_net_epoch`, the highest counts) is the epoch the device's bootloaders hold: no bundle of a
+lower epoch is offered. Clients should send it. Without it, a device whose versions match a known
+bundle still gets that bundle's epoch as the floor, but one whose versions match no known bundle
+(a dev build, an odd partial state) has no floor and may be offered an older bundle its
+bootloaders then refuse.
+
+`check` with a `device` hash is limited per device (240/h) with a loose per-IP ceiling (2000/h),
+so phones sharing a carrier NAT address aren't refused; without `device` (a recovery page that can't read it) it is
+limited strictly per IP (240/h). Reports: 120/h per IP and 100/day per device.
 
 **Publish a release**
 

@@ -6,7 +6,8 @@ module Firmware
   #    channel. Only bundles newer than it (and not of a lower security epoch) are candidates, so
   #    lowering a rollout or leaving the beta channel never downgrades a device. A device on a
   #    revoked bundle has no current bundle and is offered the newest good one, even if older
-  #    (but not of a lower security epoch than the revoked one).
+  #    (but not of a lower security epoch than the revoked one). A security epoch the client
+  #    reports is a floor too, also when its versions match no known bundle.
   # 2. Candidates: published bundles for the hardware on the channels the client's channel sees
   #    (Firmware::CHANNEL_AUDIENCE), newest first.
   # 3. The first candidate whose rollout includes the device (Firmware::Rollout) wins, unless it
@@ -17,8 +18,11 @@ module Firmware
     Result = Struct.new(:bundle, :images, :app_update_required, :required_app_version, :revoked_bundle,
                         keyword_init: true)
 
-    def initialize(hw_rev:, channel:, device_hash: nil, app_version: nil, current_versions: {})
+    # security_epoch: the highest epoch the device reported (its bootloaders refuse anything
+    # lower), or nil when it didn't say.
+    def initialize(hw_rev:, channel:, device_hash: nil, app_version: nil, current_versions: {}, security_epoch: nil)
       @hw_rev = hw_rev
+      @security_epoch = security_epoch
       @channel = channel
       @device_hash = device_hash
       @app_version = app_version
@@ -51,15 +55,16 @@ module Firmware
       FirmwareBundle.for_hw(@hw_rev).where.not(state: 'draft').includes(images: { file_attachment: :blob }).to_a
     end
 
-    # A device on a revoked bundle may go back to an older version, but not below the revoked
-    # bundle's security epoch: its bootloaders refuse a lower epoch (design doc section 9).
+    # Never below an epoch the device's bootloaders would refuse (design doc section 9): the one it
+    # reported, and its current bundle's or (on a revoked bundle, which may go back to an older
+    # version) the revoked bundle's. Without a reported epoch, versions that match no known bundle
+    # give no floor.
     def candidates(bundles, current, revoked)
       audience = Firmware::CHANNEL_AUDIENCE.fetch(@channel)
-      floor = current || revoked
+      floor = [@security_epoch, (current || revoked)&.security_epoch].compact.max
       bundles.select do |bundle|
         next false unless bundle.published? && audience.include?(bundle.channel)
-        next true unless floor
-        next false if bundle.security_epoch < floor.security_epoch
+        next false if floor && bundle.security_epoch < floor
 
         current.nil? || Firmware::Semver.compare(bundle.version, current.version) == 1
       end
