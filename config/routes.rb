@@ -197,8 +197,17 @@ Spree::Core::Engine.add_routes do
   end
 end
 
-# Device firmware releases: the admin's Firmware tab. See app/services/firmware.rb.
+# Device firmware releases: the clients' check and reports, CI's draft upload, and the admin's
+# Firmware tab. See app/services/firmware.rb.
 Spree::Core::Engine.add_routes do
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v1 do
+      get 'firmware/check', to: 'firmware/checks#show', as: :firmware_check
+      post 'firmware/reports', to: 'firmware/reports#create', as: :firmware_reports
+      post 'admin/firmware/bundles', to: 'firmware/uploads#create', as: :firmware_uploads
+    end
+  end
+
   namespace :admin, path: Spree.admin_path do
     resources :firmware_bundles, path: 'firmware' do
       member do
