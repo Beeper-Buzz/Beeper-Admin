@@ -5,7 +5,8 @@ module Firmware
   #    hardware whose images match the versions it reported (FirmwareBundle#installed_on?), on any
   #    channel. Only bundles newer than it (and not of a lower security epoch) are candidates, so
   #    lowering a rollout or leaving the beta channel never downgrades a device. A device on a
-  #    revoked bundle has no current bundle and is offered the newest good one, even if older.
+  #    revoked bundle has no current bundle and is offered the newest good one, even if older
+  #    (but not of a lower security epoch than the revoked one).
   # 2. Candidates: published bundles for the hardware on the channels the client's channel sees
   #    (Firmware::CHANNEL_AUDIENCE), newest first.
   # 3. The first candidate whose rollout includes the device (Firmware::Rollout) wins, unless it
@@ -30,7 +31,7 @@ module Firmware
       revoked = bundles.find { |b| b.revoked? && b.installed_on?(@current) }
       required_app = nil
 
-      candidates(bundles, current).each do |bundle|
+      candidates(bundles, current, revoked).each do |bundle|
         next unless Firmware::Rollout.eligible?(bundle, @device_hash)
 
         if bundle.requires_newer_app?(@app_version)
@@ -50,13 +51,17 @@ module Firmware
       FirmwareBundle.for_hw(@hw_rev).where.not(state: 'draft').includes(images: { file_attachment: :blob }).to_a
     end
 
-    def candidates(bundles, current)
+    # A device on a revoked bundle may go back to an older version, but not below the revoked
+    # bundle's security epoch: its bootloaders refuse a lower epoch (design doc section 9).
+    def candidates(bundles, current, revoked)
       audience = Firmware::CHANNEL_AUDIENCE.fetch(@channel)
+      floor = current || revoked
       bundles.select do |bundle|
         next false unless bundle.published? && audience.include?(bundle.channel)
-        next true unless current
+        next true unless floor
+        next false if bundle.security_epoch < floor.security_epoch
 
-        Firmware::Semver.compare(bundle.version, current.version) == 1 && bundle.security_epoch >= current.security_epoch
+        current.nil? || Firmware::Semver.compare(bundle.version, current.version) == 1
       end
     end
 

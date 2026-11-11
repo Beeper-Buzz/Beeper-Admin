@@ -88,6 +88,30 @@ class Spree::Api::V1::Firmware::ChecksControllerTest < ActionDispatch::Integrati
     assert_equal %w[1.4.0 1.4.0], json['bundle']['images'].map { |i| i['version'] }
   end
 
+  test 'revoked: an older good bundle of a lower security epoch than the revoked one is not offered' do
+    create_firmware_bundle(version: '1.3.0', images: OLD.merge('stm32' => '1.3.0', 'stm32_assets' => '1.3.0'),
+                           security_epoch: 1)
+    create_firmware_bundle(version: '1.4.0', images: OLD, security_epoch: 1)
+    create_firmware_bundle(version: '1.5.0', images: OLD.merge('stm32' => '1.5.0', 'stm32_assets' => '1.5.0'),
+                           security_epoch: 2, state: 'revoked')
+    check(OLD.merge('stm32' => '1.5.0', 'stm32_assets' => '1.5.0'))
+    assert_equal '1.5.0', json['revoked']['version']
+    assert_nil json['bundle'], 'the bootloaders would refuse epoch 1 after epoch 2'
+
+    create_firmware_bundle(version: '1.4.1', images: OLD.merge('stm32' => '1.4.1', 'stm32_assets' => '1.4.1'),
+                           security_epoch: 2)
+    check(OLD.merge('stm32' => '1.5.0', 'stm32_assets' => '1.5.0'))
+    assert_equal '1.4.1', offered, 'an older bundle of the same epoch is the way back'
+  end
+
+  test 'a malformed bundle version never breaks check' do
+    create_firmware_bundle(version: '1.4.0', images: OLD)
+    bad = FirmwareBundle.create!(hw_rev: 'V114', version: '1.9.0', channel: 'stable', rollout_percent: 100)
+    bad.update_columns(version: '1.9.0-rc.', state: 'published')
+    check
+    assert_response :success
+  end
+
   test 'channels: stable sees stable, beta sees beta and stable, internal sees everything' do
     create_firmware_bundle(version: '1.4.0', images: OLD)
     create_firmware_bundle(version: '1.5.0-beta.1', images: OLD.merge('stm32' => '1.5.0-beta.1'), channel: 'beta')

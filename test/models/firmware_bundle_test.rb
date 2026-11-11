@@ -15,7 +15,7 @@ class FirmwareBundleTest < ActiveSupport::TestCase
 
   test 'version and min_app_version must be semver' do
     assert draft(version: '1.4.0-rc.1+7').valid?
-    %w[1.4 v1.4.0 1.4.0.1 01.4.0].each do |bad|
+    %w[1.4 v1.4.0 1.4.0.1 01.4.0 1.4.0- 1.4.0-rc. 1.4.0-a..b 1.4.0+ 1.4.0+b.].each do |bad|
       refute draft(version: bad).valid?, bad
     end
     refute draft(min_app_version: '2.7').valid?
@@ -87,6 +87,19 @@ class FirmwareBundleTest < ActiveSupport::TestCase
     refute bundle.reload.update(hw_rev: 'V115')
     refute bundle.reload.update(security_epoch: 2)
     assert bundle.reload.update(rollout_percent: 25, release_notes: 'Fixes', channel: 'beta', min_app_version: '2.8.0')
+  end
+
+  test 'a released bundle never goes back to draft, and a revoked one stays revoked, even by direct update' do
+    bundle = create_firmware_bundle(version: '1.4.0')
+    refute bundle.update(state: 'draft')
+    assert bundle.reload.published?
+
+    bundle.pause!
+    refute bundle.reload.update(state: 'draft')
+
+    bundle.reload.revoke!
+    %w[published paused draft].each { |state| refute bundle.reload.update(state: state), state }
+    assert bundle.reload.revoked?
   end
 
   test 'only drafts can be deleted, with their images and files' do

@@ -39,6 +39,10 @@ module Spree
             return render_error("#{failed.component} #{failed.errors.full_messages.first}", :unprocessable_entity, fields: image_fields(failed)) if failed
 
             render json: present(bundle.reload), status: :created
+          rescue ActiveRecord::RecordNotUnique
+            # Two uploads of one version at once: the unique index refuses the second bundle row
+            # (before any image is stored).
+            render_error('This version already exists for that hardware and channel', :conflict)
           end
 
           private

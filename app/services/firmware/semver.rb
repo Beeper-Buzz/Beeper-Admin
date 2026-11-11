@@ -2,7 +2,9 @@ module Firmware
   # Semantic versions: MAJOR.MINOR.PATCH, an optional -prerelease and an optional +build. Build
   # metadata is ignored when ordering (as semver says) but kept in the string.
   module Semver
-    FORMAT = /\A(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/.freeze
+    # Dot-separated, non-empty identifiers ("1.0.0-rc." or "1.0.0-a..b" are not versions, and
+    # Gem::Version would raise on them).
+    FORMAT = /\A(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\z/.freeze
 
     module_function
 
@@ -15,6 +17,8 @@ module Firmware
       return unless valid?(value)
 
       Gem::Version.new(value.split('+', 2).first)
+    rescue ArgumentError
+      nil
     end
 
     # -1, 0, 1, or nil when either isn't a version.

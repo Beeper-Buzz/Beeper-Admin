@@ -46,8 +46,14 @@ module Firmware
       SQL
       connection = Firmware::RateCounter.connection
       hits = connection.uncached { connection.select_value(sql) }.to_i
-      prune(now - (2 * window)) if rand < 0.01
+      prune(now - (2 * longest_window)) if rand < 0.01
       hits
+    end
+
+    # Rules share one table, so pruning keeps rows for twice the longest window: pruning by the
+    # current rule's window (1 h for check_ip) would delete live 24 h report_device counters.
+    def longest_window
+      Firmware.config.rate_limits.values.map { |rule| rule[:window] }.max
     end
 
     def give_back(counter_keys)

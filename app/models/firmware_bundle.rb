@@ -127,6 +127,10 @@ class FirmwareBundle < ApplicationRecord
   def frozen_fields_unchanged
     return if state_was == 'draft'
 
+    # Back to draft would make the images editable again; revoked is final.
+    if will_save_change_to_state? && (state == 'draft' || state_was == 'revoked')
+      errors.add(:state, "can't change from #{state_was} to #{state}")
+    end
     FROZEN_AFTER_DRAFT.each do |field|
       errors.add(field, "can't change once the bundle is out of draft") if will_save_change_to_attribute?(field)
     end
