@@ -102,6 +102,12 @@
     </ul>
   <% end %>
 
+  <% if can? :admin, FirmwareBundle %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarFirmware">
+      <%= tab :firmware_bundles, label: 'Firmware', icon: 'settings.svg', url: spree.admin_firmware_bundles_path %>
+    </ul>
+  <% end %>
+
   <% if can? :admin, current_store %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarConfiguration">
       <%= main_menu_tree Spree.t(:configurations), icon: "settings.svg", sub_menu: "configuration", url: "#sidebar-configuration" %>

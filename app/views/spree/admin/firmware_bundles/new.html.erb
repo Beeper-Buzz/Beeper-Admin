@@ -1,0 +1,12 @@
+<% content_for :page_title do %>
+  <%= link_to 'Firmware', spree.admin_firmware_bundles_path %> &raquo; New draft
+<% end %>
+
+<div class="card">
+  <div class="card-body">
+    <%= form_with model: @bundle, url: spree.admin_firmware_bundles_path, method: :post, local: true, id: 'firmware_bundle_form' do |f| %>
+      <%= render 'form', f: f, bundle: @bundle %>
+      <%= f.submit 'Create draft', class: 'btn btn-primary' %>
+    <% end %>
+  </div>
+</div>

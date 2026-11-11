@@ -1,0 +1,48 @@
+<% draft = bundle.new_record? || bundle.editable? %>
+<div class="row">
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :hw_rev, 'Hardware revision' %>
+      <%= f.text_field :hw_rev, class: 'form-control', placeholder: 'V114', required: true, disabled: !draft %>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :version, 'Bundle version (semver)' %>
+      <%= f.text_field :version, class: 'form-control', placeholder: '1.4.0', required: true, disabled: !draft %>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :channel, 'Channel' %>
+      <%= f.select :channel, Firmware::CHANNELS, {}, class: 'form-control' %>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :security_epoch, 'Security epoch' %>
+      <%= f.number_field :security_epoch, class: 'form-control', min: 0, disabled: !draft %>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :rollout_percent, 'Rollout %' %>
+      <%= f.number_field :rollout_percent, class: 'form-control', min: 0, max: 100 %>
+      <small class="form-text text-muted">0 offers it to nobody, 100 to everyone on the channel.</small>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="form-group">
+      <%= f.label :min_app_version, 'Minimum app version' %>
+      <%= f.text_field :min_app_version, class: 'form-control', placeholder: '2.7.0' %>
+      <small class="form-text text-muted">Older apps are told to update the app first.</small>
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <%= f.label :release_notes, 'Release notes (markdown, shown in the app)' %>
+  <%= f.text_area :release_notes, rows: 6, class: 'form-control' %>
+</div>
+<% unless draft %>
+  <p class="text-muted"><small>Hardware, version, security epoch and images are fixed once a bundle leaves draft.</small></p>
+<% end %>

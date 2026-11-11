@@ -176,6 +176,93 @@ Done!
 http://localhost:8080/apidocs/swagger_ui
 Make sure to change the port that the UI is expecting in the search bar
 
+## Device firmware releases
+
+Hardware firmware is released as **bundles**: one tested set of signed images (`stm32`,
+`stm32_assets`, `nrf_app`, `nrf_net`; any subset, but `stm32` and `stm32_assets` always together)
+for one hardware revision (`hw_rev`, e.g. `V114`), on a channel (`internal`, `beta`, `stable`),
+with a staged rollout. Code: `app/services/firmware.rb` (start there), `app/models/firmware_*.rb`,
+`app/controllers/spree/api/v1/firmware/`, the admin's **Firmware** tab (`/admin/firmware`). Tables:
+`firmware_bundles`, `firmware_images`, `firmware_reports`, `firmware_rate_counters`. Image files
+live in the ActiveStorage S3 bucket and are handed out as presigned URLs that expire after an hour.
+The server never holds a signing key: every image carries its own signature and the device
+verifies it. The server checks `sha256` and `size` against the uploaded bytes, and that radio
+images are MCUboot images with an ECDSA P-256 signature of the declared version.
+
+**Endpoints**
+
+| | Auth | What |
+|---|---|---|
+| `GET /api/v1/firmware/check?hw=V114&channel=stable&device=<hash>&app_version=2.7.0&stm32=1.4.0&stm32_assets=1.4.0&nrf_app=1.2.0&nrf_net=1.1.0&security_epoch=1` | none (rate-limited per device, see below) | `{ bundle: null \| { id, version, notes, min_app_version, images: [{ component, version, size, sha256, signature_key_id, url, url_expires_at, ... }] }, app_update_required, min_app_version, revoked }`. Images are only the ones that changed, in install order (`nrf_net`, `nrf_app`, `stm32_assets`, `stm32`). |
+| `POST /api/v1/firmware/reports` | optional bearer (links the user) | one install result: `device`, `bundle_id`, `component`, `from_version`, `to_version`, `result` (`ok`/`failed`/`rolled_back`/`aborted`), `stage`, `error_code`, `duration_ms`, `app_version`, `platform`, `phone_model` |
+| `POST /api/v1/admin/firmware/bundles` | `Authorization: Bearer $FIRMWARE_UPLOAD_TOKEN` | CI creates a **draft** (multipart; see the controller's header comment) |
+
+`device` is the device's own SHA-256 of its unique ID (64 hex); the raw ID never reaches the
+server. A device is in a rollout when `SHA-256("<device>:<bundle version>")` (first 8 bytes,
+big-endian) mod 100 is below `rollout_percent`; raising the percentage only adds devices.
+
+`security_epoch` (optional; or per component: `stm32_epoch`, `stm32_assets_epoch`, `nrf_app_epoch`,
+`nrf_net_epoch`, the highest counts) is the epoch the device's bootloaders hold: no bundle of a
+lower epoch is offered. Clients should send it. Without it, a device whose versions match a known
+bundle still gets that bundle's epoch as the floor, but one whose versions match no known bundle
+(a dev build, an odd partial state) has no floor and may be offered an older bundle its
+bootloaders then refuse.
+
+`check` with a `device` hash is limited per device (240/h) with a loose per-IP ceiling (2000/h),
+so phones sharing a carrier NAT address aren't refused; without `device` (a recovery page that can't read it) it is
+limited strictly per IP (240/h). Reports: 120/h per IP and 100/day per device.
+
+**Publish a release**
+
+1. CI (or **New draft bundle** in the tab) creates a draft with its images. Check the versions,
+   sizes and release notes on the bundle page.
+2. Set the channel and rollout % (start small, e.g. 5), then **Publish**. From then on the
+   hardware revision, version, security epoch and images are fixed.
+3. Read the install reports on the bundle page, then raise the rollout (25, then 100).
+
+A device is never offered a bundle older than the one it runs (lowering a rollout or leaving the
+beta channel doesn't downgrade anyone), nor one that needs a newer app (`min_app_version`; the
+answer then says `app_update_required`).
+
+**Kill switch: Pause.** A paused bundle is offered to nobody, at once; devices that have it keep
+it. **Resume** offers it again.
+
+**Rollback.** **Revoke** a bad bundle: it is offered to nobody, devices still on it get
+`revoked` in the check answer and are offered the newest good bundle, even if that is older
+(downgrades are fine within a security epoch). Revoking can't be undone. To roll a fix out
+forward instead, publish the previous images as a new, higher bundle version.
+
+**CI token.** Generate a long random token (at least 32 characters, e.g.
+`ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'`), set it as `FIRMWARE_UPLOAD_TOKEN` in the
+Heroku app's config and as a GitHub Actions secret of the firmware repo. To rotate, set
+`FIRMWARE_UPLOAD_TOKEN=<new>,<old>`, switch CI to the new one, then drop the old one. The token
+only creates drafts; it can't publish, edit or delete. Unset, the upload endpoint refuses every
+request.
+
+```sh
+curl -fsS -X POST "$API_URL/api/v1/admin/firmware/bundles" \
+  -H "Authorization: Bearer $FIRMWARE_UPLOAD_TOKEN" \
+  -F hw=V114 -F version=1.5.0 -F channel=internal -F "release_notes=<notes.md" \
+  -F "images[stm32][file]=@stm32.bin" -F "images[stm32][version]=1.5.0" \
+  -F "images[stm32][sha256]=$(sha256sum stm32.bin | cut -d' ' -f1)" -F "images[stm32][signature_key_id]=stm32-dev" \
+  -F "images[stm32_assets][file]=@assets.bin" ...
+```
+
+**Environment**
+
+- `FIRMWARE_UPLOAD_TOKEN`: CI upload token(s), comma-separated.
+- `FIRMWARE_ALLOWED_ORIGINS`: browser origins allowed to call `check` and `reports` (default
+  `https://beeper.buzz,https://www.beeper.buzz`), for the USB recovery/update web page.
+
+**Manual step for the web page:** the S3 bucket (`AWS_BUCKET_NAME`) needs a CORS rule so the
+browser can `fetch()` the presigned URLs. Add to the bucket's existing rules (S3 console →
+bucket → Permissions → CORS):
+
+```json
+{ "AllowedOrigins": ["https://beeper.buzz", "https://www.beeper.buzz"], "AllowedMethods": ["GET", "HEAD"],
+  "AllowedHeaders": ["*"], "ExposeHeaders": ["Content-Length", "ETag"], "MaxAgeSeconds": 3600 }
+```
+
 ## TODO
 
 Other things we may need to cover:

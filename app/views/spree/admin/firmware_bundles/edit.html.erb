@@ -1,0 +1,13 @@
+<% content_for :page_title do %>
+  <%= link_to 'Firmware', spree.admin_firmware_bundles_path %> &raquo;
+  <%= link_to @bundle.label, spree.admin_firmware_bundle_path(@bundle) %> &raquo; Edit
+<% end %>
+
+<div class="card">
+  <div class="card-body">
+    <%= form_with model: @bundle, url: spree.admin_firmware_bundle_path(@bundle), method: :patch, local: true, id: 'firmware_bundle_form' do |f| %>
+      <%= render 'form', f: f, bundle: @bundle %>
+      <%= f.submit 'Save', class: 'btn btn-primary' %>
+    <% end %>
+  </div>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_11_08_210000) do
+ActiveRecord::Schema.define(version: 2026_11_11_120000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -125,6 +125,66 @@ ActiveRecord::Schema.define(version: 2026_11_08_210000) do
     t.index ["user_id", "variant_id"], name: "index_favorites_on_user_and_variant", unique: true
     t.index ["user_id"], name: "index_favorites_on_user_id"
     t.index ["variant_id"], name: "index_favorites_on_variant_id"
+  end
+
+  create_table "firmware_bundles", force: :cascade do |t|
+    t.string "hw_rev", null: false
+    t.string "version", null: false
+    t.string "channel", default: "internal", null: false
+    t.string "state", default: "draft", null: false
+    t.integer "rollout_percent", default: 0, null: false
+    t.string "min_app_version"
+    t.integer "security_epoch", default: 0, null: false
+    t.text "release_notes"
+    t.datetime "published_at"
+    t.string "created_by"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["hw_rev", "channel", "version"], name: "index_firmware_bundles_on_hw_rev_and_channel_and_version", unique: true
+    t.index ["hw_rev", "state"], name: "index_firmware_bundles_on_hw_rev_and_state"
+  end
+
+  create_table "firmware_images", force: :cascade do |t|
+    t.bigint "firmware_bundle_id", null: false
+    t.string "component", null: false
+    t.string "version", null: false
+    t.bigint "size", null: false
+    t.string "sha256", null: false
+    t.string "signature_key_id", null: false
+    t.integer "link_proto"
+    t.integer "app_proto"
+    t.string "content_hash"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["firmware_bundle_id", "component"], name: "index_firmware_images_on_firmware_bundle_id_and_component", unique: true
+  end
+
+  create_table "firmware_rate_counters", force: :cascade do |t|
+    t.string "key", null: false
+    t.datetime "window_started_at", null: false
+    t.integer "hits", default: 0, null: false
+    t.index ["key"], name: "index_firmware_rate_counters_on_key", unique: true
+    t.index ["window_started_at"], name: "index_firmware_rate_counters_on_window_started_at"
+  end
+
+  create_table "firmware_reports", force: :cascade do |t|
+    t.bigint "firmware_bundle_id", null: false
+    t.integer "user_id"
+    t.string "device_hash", null: false
+    t.string "component"
+    t.string "from_version"
+    t.string "to_version"
+    t.string "result", null: false
+    t.string "stage"
+    t.string "error_code"
+    t.integer "duration_ms"
+    t.string "app_version"
+    t.string "platform"
+    t.string "phone_model"
+    t.datetime "created_at", null: false
+    t.index ["device_hash"], name: "index_firmware_reports_on_device_hash"
+    t.index ["firmware_bundle_id", "created_at"], name: "index_firmware_reports_on_firmware_bundle_id_and_created_at"
+    t.index ["user_id"], name: "index_firmware_reports_on_user_id"
   end
 
   create_table "flipper_features", force: :cascade do |t|
@@ -1705,6 +1765,9 @@ ActiveRecord::Schema.define(version: 2026_11_08_210000) do
   add_foreign_key "app_feedbacks", "spree_users", column: "user_id", on_delete: :nullify
   add_foreign_key "favorites", "spree_users", column: "user_id"
   add_foreign_key "favorites", "spree_variants", column: "variant_id"
+  add_foreign_key "firmware_images", "firmware_bundles"
+  add_foreign_key "firmware_reports", "firmware_bundles"
+  add_foreign_key "firmware_reports", "spree_users", column: "user_id", on_delete: :nullify
   add_foreign_key "live_stream_contacts", "contacts"
   add_foreign_key "live_stream_contacts", "live_streams"
   add_foreign_key "live_streams", "spree_users", column: "actor_id"
