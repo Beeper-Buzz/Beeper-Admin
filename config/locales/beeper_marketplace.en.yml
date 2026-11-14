@@ -1,0 +1,38 @@
+# Beeper copy for the generic marketplace screens (digital assets, creators, affiliates).
+en:
+  spree:
+    # The product tab of app/overrides/spree/admin/shared/_product_tabs/digital_asset_tab.
+    digital_asset: Beeper content
+  beeper:
+    marketplace:
+      kinds:
+        sample_pack: Sample pack for the Beeper Sampler
+        effect_preset: Effect preset for the Beeper effects rack
+        visualizer: Visualizer scene (a fragment shader)
+      manifest_guide:
+        title: Beeper manifests
+        intro: >-
+          The kind decides what the Beeper app does with the files, and the manifest (JSON) tells it how.
+          A draft may keep an empty manifest; publishing needs a valid one. Leave out "files": the server
+          keeps the checksums there.
+        sample_pack: >-
+          format 1; 1 to 64 samples, the app loads the first 16. Every "file" is an attached wav, aiff,
+          flac or mp3. root_note 0..127 (default 60); low_note and high_note (0..127) set a key zone and
+          come together; one_shot true or false; gain_db -24..12; pad 1..16 (1-8 bank A, 9-16 bank B),
+          each pad once. pack_id (a-z, 0-9, -; 3 to 40) keeps a pack's identity across copies.
+        effect_preset: >-
+          format 1; each of the app's nine effects at most once, with enabled true or false and any
+          of its params within these ranges:
+        visualizer: >-
+          format 1; "shader" names an attached .glsl file of at most 64 KB that defines
+          vec4 beeperMain(vec2 uv) and helper functions only: no main, precision, uniform, attribute,
+          varying, #version, #extension or #include (the app declares them). Up to 8 params, each read
+          in the shader as uP_<name> (name: a lowercase letter, then up to 23 letters or digits), with
+          min, max, default and an optional drive (bass, mid, high, level or beat).
+      order_email:
+        digital_html: >-
+          Your downloads are in the Library of the Beeper app: sign in with this account and open
+          Library to download them and keep them on your device. You can also find them at %{library_url}.
+        digital_text: >-
+          Your downloads are in the Library of the Beeper app: sign in with this account and open
+          Library to download them and keep them on your device. You can also find them at %{library_url}

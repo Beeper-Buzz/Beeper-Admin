@@ -1,0 +1,2 @@
+<!-- insert_after "[data-hook='admin_digital_asset_form_fields']" -->
+<%= render partial: 'spree/admin/digital_assets/beeper_manifest_guide' %>

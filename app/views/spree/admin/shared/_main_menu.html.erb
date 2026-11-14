@@ -28,6 +28,12 @@
     </ul>
   <% end %>
 
+  <% if can? :admin, Spree::CreatorApplication %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarCreators">
+      <%= tab :creator_applications, label: 'Creators', icon: 'users.svg', url: spree.admin_creator_applications_path, match_path: '/creator_' %>
+    </ul>
+  <% end %>
+
   <% if can? :admin, Spree::Admin::ReportsController %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarReport">
       <%= tab *Spree::BackendConfiguration::REPORT_TABS, icon: 'report.svg' %>
@@ -93,6 +99,12 @@
   <% if can? :admin, Spree::ContentReport %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarContentReports">
       <%= tab :content_reports, label: 'Content reports', icon: 'report.svg', url: spree.admin_content_reports_path %>
+    </ul>
+  <% end %>
+
+  <% if can? :admin, AffiliateAccount %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarAffiliates">
+      <%= tab :affiliate_accounts, label: 'Affiliates', icon: 'money.svg', url: spree.admin_affiliate_accounts_path, match_path: Spree::Admin::AffiliatesTabHelper.affiliates_tab_match_path(spree.admin_path) %>
     </ul>
   <% end %>
 
