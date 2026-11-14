@@ -1,0 +1,29 @@
+<%# Beeper's kinds and manifests (Beeper::Manifests), shown under the digital asset form. %>
+<div class="card mb-3" data-hook="beeper_manifest_guide">
+  <div class="card-header"><h2 class="card-title mb-0 h6"><%= t('beeper.marketplace.manifest_guide.title') %></h2></div>
+  <div class="card-body">
+    <p class="text-muted"><%= t('beeper.marketplace.manifest_guide.intro') %></p>
+    <dl class="mb-0">
+      <dt><code>sample_pack</code> &mdash; <%= t('beeper.marketplace.kinds.sample_pack') %></dt>
+      <dd>
+        <%= t('beeper.marketplace.manifest_guide.sample_pack') %>
+        <pre class="mt-2 mb-3"><code><%= JSON.pretty_generate('format' => 1, 'pack_id' => 'my-pack', 'bpm' => 120, 'samples' => [{ 'file' => 'kick.wav', 'name' => 'Kick', 'root_note' => 60, 'one_shot' => true, 'gain_db' => 0, 'pad' => 1 }, { 'file' => 'pad.wav', 'name' => 'Warm pad', 'root_note' => 48, 'low_note' => 36, 'high_note' => 72, 'one_shot' => false, 'loop' => { 'start_ms' => 200, 'end_ms' => 1800 }, 'pad' => 9 }]) %></code></pre>
+      </dd>
+      <dt><code>effect_preset</code> &mdash; <%= t('beeper.marketplace.kinds.effect_preset') %></dt>
+      <dd>
+        <%= t('beeper.marketplace.manifest_guide.effect_preset') %>
+        <ul class="small mt-2 mb-2">
+          <% Beeper::Effects::DEFINITIONS.each do |id, params| %>
+            <li><code><%= id %></code>: <%= params.map { |name, meta| "#{name} #{meta['min']}..#{meta['max']}" }.join(', ') %></li>
+          <% end %>
+        </ul>
+        <pre class="mb-3"><code><%= JSON.pretty_generate('format' => 1, 'effects' => [{ 'id' => 'reverb', 'enabled' => true, 'params' => { 'size' => 0.8, 'mix' => 0.4 } }, { 'id' => 'echo', 'enabled' => true, 'params' => { 'sync' => 1, 'division' => 2, 'feedback' => 0.5 } }]) %></code></pre>
+      </dd>
+      <dt><code>visualizer</code> &mdash; <%= t('beeper.marketplace.kinds.visualizer') %></dt>
+      <dd class="mb-0">
+        <%= t('beeper.marketplace.manifest_guide.visualizer') %>
+        <pre class="mt-2 mb-0"><code><%= JSON.pretty_generate('format' => 1, 'shader' => 'rings.glsl', 'params' => [{ 'name' => 'glow', 'label' => 'Glow', 'min' => 0, 'max' => 1, 'default' => 0.5, 'drive' => 'bass' }]) %></code></pre>
+      </dd>
+    </dl>
+  </div>
+</div>

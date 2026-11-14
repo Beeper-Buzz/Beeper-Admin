@@ -1,0 +1,6 @@
+<!-- insert_after "table.purchase" -->
+<% if Beeper::Marketplace.digital_order?(@order) %>
+  <p data-hook="beeper_digital_downloads">
+    <%= t('beeper.marketplace.order_email.digital_html', library_url: link_to(Beeper::Marketplace::LIBRARY_URL.delete_prefix('https://'), Beeper::Marketplace::LIBRARY_URL)) %>
+  </p>
+<% end %>
