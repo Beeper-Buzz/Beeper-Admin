@@ -225,7 +225,7 @@ class Beeper::ManifestsTest < ActiveSupport::TestCase
       "uniform float uExtra;\n" => 'uniform declarations not allowed',
       "attribute vec2 aPos;\n" => 'attribute declarations not allowed',
       "varying vec2 vUv;\n" => 'varying declarations not allowed',
-      "precision highp float;\n" => 'precision statements not allowed',
+      "precision highp float;\n" => 'precision declarations not allowed',
       "#version 300 es\n" => '#version not allowed',
       "#extension GL_OES_standard_derivatives : enable\n" => '#extension not allowed',
       "#include \"noise.glsl\"\n" => '#include not allowed',
@@ -237,6 +237,56 @@ class Beeper::ManifestsTest < ActiveSupport::TestCase
 
   test 'visualizer: forbidden words inside comments are fine' do
     assert_empty viz_errors(viz, "/* no uniform here, and no precision */\n// void main() lives in the host\n#{SHADER}")
+  end
+
+  # Parity with the web's checkShaderSource (Beeper-Frontend lib/manifests/visualizer.ts).
+  def source_errors(source)
+    Beeper::Manifests::Visualizer.source_errors(source)
+  end
+
+  test 'web parity: // uniform in a line comment passes' do
+    assert_empty source_errors("// uniform float uExtra;\n#{SHADER}")
+  end
+
+  test 'web parity: /* void main( */ passes' do
+    assert_empty source_errors("/* void main( */\n#{SHADER}")
+  end
+
+  test 'web parity: whichever comment opens first wins' do
+    assert_error source_errors("// a /*\nuniform float u;\n#{SHADER}"), 'uniform declarations not allowed'
+    assert_empty source_errors("/* // */ #{SHADER}")
+  end
+
+  test 'web parity: an unterminated /* hides the rest of the file' do
+    assert_empty source_errors("#{SHADER}/* uniform float u; void main() {}")
+    errors = source_errors("/* open\n#{SHADER}")
+    assert_equal ['shader must define beeperMain'], errors
+  end
+
+  test 'web parity: directives with whitespace after # are rejected, wherever they appear' do
+    assert_error source_errors("# version 100\n#{SHADER}"), '#version not allowed'
+    assert_error source_errors("#  extension GL_OES_standard_derivatives : enable\n#{SHADER}"), '#extension not allowed'
+    assert_error source_errors("#{SHADER} vec2 x; #include \"a\"\n"), '#include not allowed'
+  end
+
+  test 'web parity: only precision qualifiers are rejected, keywords as whole words' do
+    assert_error source_errors("precision mediump float;\n#{SHADER}"), 'precision declarations not allowed'
+    assert_empty source_errors("float uniformity = 1.0;\nfloat my_varying = 0.0;\n#{SHADER}")
+  end
+
+  test 'web parity: beeperMain needs vec4 beeperMain(vec2 <name>), no body required on the line' do
+    assert_empty source_errors("vec4 beeperMain ( vec2 p )\n{\n  return vec4(p, 0.0, 1.0);\n}\n")
+    assert_equal ['shader must define beeperMain'], source_errors("vec4 notMain(vec2 uv) { return vec4(1.0); }\n")
+    assert_equal ['shader must define beeperMain'], source_errors("vec3 beeperMain(vec2 uv) { return vec3(1.0); }\n")
+  end
+
+  test 'web parity: messages and the 64 KB limit in UTF-8 bytes' do
+    at_limit = SHADER + ('é' * ((64 * 1024 - SHADER.bytesize) / 2))
+    assert_operator at_limit.bytesize, :<=, 64 * 1024
+    assert_empty source_errors(at_limit)
+    assert_equal ['shader too large (max 64 KB)'], source_errors("#{at_limit}éé")
+    assert_equal ['uniform declarations not allowed', 'void main not allowed (the host provides main)'],
+                 source_errors("#{SHADER}uniform float u;\nvoid main() {}\n")
   end
 
   test 'visualizer: params rules' do

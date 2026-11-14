@@ -10,22 +10,35 @@ module Beeper
     # main, so the file may declare none of them. The server checks the size (64 KB), that
     # beeperMain is defined, and that no forbidden declaration or directive appears outside
     # comments. Compiling happens in the app (with a fallback) and in the web preview.
+    #
+    # The source checks are a port of the web's checkShaderSource (Beeper-Frontend
+    # lib/manifests/visualizer.ts) so creator portal and server never disagree: same comment
+    # stripping, same patterns, same messages. Word boundaries are spelled as ASCII lookarounds
+    # to match JavaScript's \b. Change both together.
     module Visualizer
-      MAX_SHADER_BYTES = 64.kilobytes
+      MAX_SHADER_BYTES = 64 * 1024
       MAX_PARAMS = 8
       PARAM_NAME = /\A[a-z][a-zA-Z0-9]{0,23}\z/.freeze
       DRIVES = %w[bass mid high level beat].freeze
-      BEEPER_MAIN = /\bvec4\s+beeperMain\s*\(\s*vec2\s+\w+\s*\)\s*\{/.freeze
+      B = '(?<![A-Za-z0-9_])'.freeze # JS \b before a word character
+      E = '(?![A-Za-z0-9_])'.freeze # JS \b after a word character
+      # JS \s (ECMAScript WhiteSpace and LineTerminator), wider than Ruby's ASCII \s.
+      S = "[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]".freeze
+      BEEPER_MAIN = /#{B}vec4#{S}+beeperMain#{S}*\(#{S}*vec2#{S}+[A-Za-z0-9_]+#{S}*\)/.freeze
+      # One pass: whichever comment opens first wins ("// a /*" is a line comment, "/* // */" a
+      # block comment); an unterminated block comment runs to the end of the file.
+      COMMENTS = %r{/\*.*?(?:\*/|\z)|//[^\n]*}m.freeze
       FORBIDDEN = [
-        [/\bvoid\s+main\s*\(/, 'void main not allowed (the app provides main)'],
-        [/^\s*#\s*version\b/, '#version not allowed'],
-        [/^\s*#\s*extension\b/, '#extension not allowed'],
-        [/^\s*#\s*include\b/, '#include not allowed'],
-        [/\buniform\b/, 'uniform declarations not allowed (declare params in the manifest)'],
-        [/\battribute\b/, 'attribute declarations not allowed'],
-        [/\bvarying\b/, 'varying declarations not allowed'],
-        [/\bprecision\b/, 'precision statements not allowed']
+        [/##{S}*version#{E}/, '#version not allowed'],
+        [/##{S}*extension#{E}/, '#extension not allowed'],
+        [/##{S}*include#{E}/, '#include not allowed'],
+        [/#{B}precision#{S}+(?:lowp|mediump|highp)#{E}/, 'precision declarations not allowed'],
+        [/#{B}uniform#{E}/, 'uniform declarations not allowed'],
+        [/#{B}attribute#{E}/, 'attribute declarations not allowed'],
+        [/#{B}varying#{E}/, 'varying declarations not allowed'],
+        [/#{B}void#{S}+main#{S}*\(/, 'void main not allowed (the host provides main)']
       ].freeze
+      TOO_LARGE = 'shader too large (max 64 KB)'.freeze
 
       module_function
 
@@ -48,7 +61,8 @@ module Beeper
         return ["shader \"#{name}\" is not attached"] unless files.key?(name)
 
         blob = files[name]
-        return ["shader too large (at most #{MAX_SHADER_BYTES / 1.kilobyte} KB)"] if blob.byte_size.to_i > MAX_SHADER_BYTES
+        # Not downloaded when too large; the web reports the same error for such a file.
+        return [TOO_LARGE] if blob.byte_size.to_i > MAX_SHADER_BYTES
 
         source = begin
           blob.download
@@ -58,21 +72,24 @@ module Beeper
         source_errors(source)
       end
 
-      # Checks GLSL source text (comments removed first).
+      # The web's checkShaderSource: size in UTF-8 bytes, then the patterns on the source with
+      # comments removed. Bytes that are not UTF-8 become U+FFFD, as the browser's text decoding
+      # does.
       def source_errors(source)
-        return ["shader too large (at most #{MAX_SHADER_BYTES / 1.kilobyte} KB)"] if source.bytesize > MAX_SHADER_BYTES
-
         text = source.dup.force_encoding(Encoding::UTF_8)
-        return ['shader must be UTF-8 text'] unless text.valid_encoding?
-
+        text = text.scrub("�") unless text.valid_encoding?
+        errors = []
+        errors << TOO_LARGE if text.bytesize > MAX_SHADER_BYTES
         code = strip_comments(text)
-        errors = FORBIDDEN.filter_map { |pattern, message| "shader: #{message}" if code.match?(pattern) }
-        errors.unshift('shader must define beeperMain: vec4 beeperMain(vec2 uv) { ... }') unless code.match?(BEEPER_MAIN)
+        FORBIDDEN.each { |pattern, message| errors << message if code.match?(pattern) }
+        errors << 'shader must define beeperMain' unless code.match?(BEEPER_MAIN)
         errors
       end
 
+      # Line comments become one space; block comments keep their line breaks, every other
+      # character becomes a space.
       def strip_comments(text)
-        text.gsub(%r{/\*.*?\*/}m, ' ').gsub(%r{//[^\n]*}, '')
+        text.gsub(COMMENTS) { |m| m.start_with?('//') ? ' ' : m.gsub(/[^\n]/, ' ') }
       end
 
       def params_errors(params)
