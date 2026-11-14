@@ -190,4 +190,16 @@ class Beeper::MarketplaceSeedTest < ActiveSupport::TestCase
   ensure
     FileUtils.rm_rf(dir) if dir
   end
+
+  test 'rake beeper:marketplace:starter_kit with no dir publishes the committed db/starter_kit' do
+    Rails.application.load_tasks unless Rake::Task.task_defined?('beeper:marketplace:seed')
+    assert_output(/Marketplace seeded/) { Rake::Task['beeper:marketplace:seed'].execute }
+
+    assert_output(/Starter Kit version 1 published/) do
+      Rake::Task['beeper:marketplace:starter_kit'].execute(Rake::TaskArguments.new([:dir], []))
+    end
+    manifest = Spree::DigitalAsset.last.manifest
+    assert_equal 'starter-kit', manifest['pack_id']
+    assert_equal (1..16).to_a, manifest['samples'].map { |s| s['pad'] }.sort
+  end
 end

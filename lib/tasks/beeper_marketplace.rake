@@ -8,10 +8,10 @@ namespace :beeper do
            "role #{result[:role].name}, product #{result[:starter_kit].slug}"
     end
 
-    desc 'Publish the Beeper Starter Kit from a directory of WAVs plus manifest.json (pack_id "starter-kit"; idempotent)'
+    desc 'Publish the Beeper Starter Kit from a directory of WAVs plus manifest.json (default db/starter_kit; pack_id "starter-kit"; idempotent)'
     task :starter_kit, [:dir] => :environment do |_task, args|
-      dir = args[:dir].presence || ENV['DIR']
-      abort 'Usage: rake "beeper:marketplace:starter_kit[path/to/kit]"' if dir.blank?
+      # Defaults to the kit committed in db/starter_kit (rendered by BeeperNative's scripts/make-starter-kit.mjs).
+      dir = args[:dir].presence || ENV['DIR'].presence || Rails.root.join('db/starter_kit').to_s
 
       begin
         result = Beeper::Marketplace::StarterKit.call(dir)

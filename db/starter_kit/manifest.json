@@ -1,0 +1,194 @@
+{
+  "format": 1,
+  "pack_id": "starter-kit",
+  "samples": [
+    {
+      "file": "01-kick.wav",
+      "name": "Kick",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "kick"
+      ],
+      "pad": 1
+    },
+    {
+      "file": "02-snare.wav",
+      "name": "Snare",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "snare"
+      ],
+      "pad": 2
+    },
+    {
+      "file": "03-closed-hat.wav",
+      "name": "Closed Hat",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "hat"
+      ],
+      "pad": 3
+    },
+    {
+      "file": "04-open-hat.wav",
+      "name": "Open Hat",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "hat"
+      ],
+      "pad": 4
+    },
+    {
+      "file": "05-clap.wav",
+      "name": "Clap",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "clap"
+      ],
+      "pad": 5
+    },
+    {
+      "file": "06-low-tom.wav",
+      "name": "Low Tom",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "tom"
+      ],
+      "pad": 6
+    },
+    {
+      "file": "07-rim.wav",
+      "name": "Rim",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "perc"
+      ],
+      "pad": 7
+    },
+    {
+      "file": "08-shaker.wav",
+      "name": "Shaker",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "drums",
+        "perc"
+      ],
+      "pad": 8
+    },
+    {
+      "file": "09-sub-bass.wav",
+      "name": "Sub Bass",
+      "root_note": 36,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "bass"
+      ],
+      "pad": 9
+    },
+    {
+      "file": "10-reese-bass.wav",
+      "name": "Reese Bass",
+      "root_note": 36,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "bass"
+      ],
+      "pad": 10
+    },
+    {
+      "file": "11-pluck-bass.wav",
+      "name": "Pluck Bass",
+      "root_note": 36,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "bass"
+      ],
+      "pad": 11
+    },
+    {
+      "file": "12-minor-stab.wav",
+      "name": "Minor Stab",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "stab",
+        "chord"
+      ],
+      "pad": 12
+    },
+    {
+      "file": "13-organ-stab.wav",
+      "name": "Organ Stab",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "stab",
+        "chord"
+      ],
+      "pad": 13
+    },
+    {
+      "file": "14-pluck.wav",
+      "name": "Pluck",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "pluck",
+        "lead"
+      ],
+      "pad": 14
+    },
+    {
+      "file": "15-bell.wav",
+      "name": "Bell",
+      "root_note": 72,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "bell",
+        "fx"
+      ],
+      "pad": 15
+    },
+    {
+      "file": "16-zap.wav",
+      "name": "Zap",
+      "root_note": 60,
+      "one_shot": true,
+      "gain_db": 0,
+      "tags": [
+        "fx"
+      ],
+      "pad": 16
+    }
+  ]
+}
