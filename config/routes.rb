@@ -296,3 +296,13 @@ Spree::Core::Engine.add_routes do
     resources :creator_payouts, only: %i[index new create]
   end
 end
+
+# Affiliate program: click tracking, order attribution, the affiliate's own API and the admin tab.
+Spree::Core::Engine.add_routes do
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v1 do
+      post 'affiliate/clicks', to: 'affiliate_clicks#create', as: :affiliate_clicks
+      patch 'orders/current/affiliate', to: 'order_affiliates#update', as: :current_order_affiliate
+    end
+  end
+end
