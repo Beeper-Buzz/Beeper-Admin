@@ -33,9 +33,11 @@ class Creators::ApproverTest < ActiveSupport::TestCase
   end
 
   test 'approve works without an is_creator column' do
-    refute Spree::User.column_names.include?('is_creator')
-    Creators::Approver.approve!(@application, @admin)
-    assert Creators.creator?(@user.reload)
+    without_user_column(:is_creator) do
+      refute Spree::User.column_names.include?('is_creator')
+      Creators::Approver.approve!(@application, @admin)
+      assert Creators.creator?(Spree::User.find(@user.id))
+    end
   end
 
   test 'approve uses the configured default share' do

@@ -43,8 +43,10 @@ module CreatorsTestHelper
     product.reload
   end
 
-  # An order in the cart state for the user holding [product, quantity] pairs.
-  def cart_order(user, *items)
+  # An order in the cart state for the user holding [product, quantity] pairs. Named apart from
+  # AffiliatesTestHelper#cart_order(user:, email:, products:), which is included into the same
+  # test case.
+  def creator_cart_order(user, *items)
     order = Spree::Order.create!(user: user, email: user.email, store: digital_store, currency: 'USD')
     items.each { |product, quantity| Spree::Cart::AddItem.call(order: order, variant: product.master, quantity: quantity) }
     order.update_with_updater!
@@ -76,16 +78,43 @@ module CreatorsTestHelper
 
   # Runs the block with a temporary boolean column on spree_users. Postgres DDL is transactional,
   # and the column is dropped again before the test's transaction rolls back.
+  # An app whose users already have the column (beeper's spree_users.is_creator) runs the block
+  # as is and keeps the column.
   def with_user_column(name)
     connection = ActiveRecord::Base.connection
-    connection.add_column :spree_users, name, :boolean, default: false, null: false
-    connection.clear_cache!
-    Spree::User.reset_column_information
+    existed = connection.column_exists?(:spree_users, name)
+    unless existed
+      connection.add_column :spree_users, name, :boolean, default: false, null: false
+      connection.clear_cache!
+      Spree::User.reset_column_information
+    end
     yield
   ensure
-    connection.remove_column :spree_users, name if connection.column_exists?(:spree_users, name)
-    connection.clear_cache!
-    Spree::User.reset_column_information
+    unless existed
+      connection.remove_column :spree_users, name if connection.column_exists?(:spree_users, name)
+      connection.clear_cache!
+      Spree::User.reset_column_information
+    end
+  end
+
+  # Runs the block with the boolean column absent from spree_users, for an app that has it. The
+  # column is put back before the test's transaction rolls back (which restores the original
+  # column and its index).
+  def without_user_column(name)
+    connection = ActiveRecord::Base.connection
+    existed = connection.column_exists?(:spree_users, name)
+    if existed
+      connection.remove_column :spree_users, name
+      connection.clear_cache!
+      Spree::User.reset_column_information
+    end
+    yield
+  ensure
+    if existed
+      connection.add_column :spree_users, name, :boolean, default: false, null: false unless connection.column_exists?(:spree_users, name)
+      connection.clear_cache!
+      Spree::User.reset_column_information
+    end
   end
 end
 
