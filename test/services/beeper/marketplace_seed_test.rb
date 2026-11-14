@@ -3,6 +3,8 @@ require 'rake'
 
 # Beeper's marketplace seed data and the Starter Kit (spec §1.5, §3.5).
 class Beeper::MarketplaceSeedTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   WAV = DigitalAssetsTestHelper::WAV_BYTES
 
   setup do
@@ -93,6 +95,37 @@ class Beeper::MarketplaceSeedTest < ActiveSupport::TestCase
     product = result[:product].reload
     assert product.available?
     assert DigitalAssets::Claim.claimable?(product.master)
+  ensure
+    FileUtils.rm_rf(dir) if dir
+  end
+
+  def sha256_entries(asset)
+    Array(asset.reload.manifest['files']).to_h { |entry| [entry['filename'], entry['sha256']] }
+  end
+
+  test 'starter_kit stores the files sha256 before returning, without a background job' do
+    dir = kit_dir
+    asset = nil
+    assert_no_enqueued_jobs(only: DigitalAssets::ChecksumJob) { asset = Beeper::Marketplace::StarterKit.call(dir)[:asset] }
+
+    expected = Dir[dir.join('*.wav')].to_h { |path| [File.basename(path), Digest::SHA256.file(path).hexdigest] }
+    assert_equal expected, sha256_entries(asset)
+    assert asset.file_entries.all? { |file| file[:sha256].present? }
+  ensure
+    FileUtils.rm_rf(dir) if dir
+  end
+
+  test 'starter_kit unchanged run backfills missing sha256 entries' do
+    dir = kit_dir
+    asset = Beeper::Marketplace::StarterKit.call(dir)[:asset]
+    expected = sha256_entries(asset)
+    assert_equal 16, expected.compact.size
+    asset.update_columns(manifest: asset.manifest.except('files'))
+
+    result = Beeper::Marketplace::StarterKit.call(dir)
+
+    assert_equal :unchanged, result[:status]
+    assert_equal expected, sha256_entries(asset)
   ensure
     FileUtils.rm_rf(dir) if dir
   end

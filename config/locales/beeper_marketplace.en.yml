@@ -33,3 +33,6 @@ en:
         digital_html: >-
           Your downloads are in the Library of the Beeper app: sign in with this account and open
           Library to download them and keep them on your device. You can also find them at %{library_url}.
+        digital_text: >-
+          Your downloads are in the Library of the Beeper app: sign in with this account and open
+          Library to download them and keep them on your device. You can also find them at %{library_url}

@@ -6,7 +6,8 @@ module Beeper
   #
   # Beeper::DigitalKinds registers them with DigitalAssets.config through .validator_for, which
   # lets a draft keep an empty manifest (a creator saves details before uploading files) but
-  # validates every non-empty manifest and every manifest of an asset being published.
+  # validates every non-empty draft manifest and every asset being published, and leaves saved
+  # published or retired assets alone unless their manifest, kind or files change (.skip?).
   module Manifests
     VALIDATORS = {
       'sample_pack' => 'Beeper::Manifests::SamplePack',
@@ -20,11 +21,28 @@ module Beeper
     def validator_for(kind)
       validator = VALIDATORS.fetch(kind.to_s)
       lambda do |manifest, asset|
-        if asset&.draft? && manifest.is_a?(Hash) && manifest.except('files', :files).empty?
+        if skip?(manifest, asset)
           []
         else
           validator.constantize.call(manifest, asset)
         end
+      end
+    end
+
+    # No validation for
+    # - a draft with an empty manifest (a creator saves details before uploading files);
+    # - a saved published or retired asset whose manifest, files and kind are unchanged and which
+    #   is not being published now (retire!, a touch, a no-op save). Those were checked when they
+    #   were published, so retiring a visualizer reads no shader from storage, and a later
+    #   narrowing of config/beeper_effects.yml doesn't block retiring an old preset.
+    def skip?(manifest, asset)
+      return false unless asset
+
+      if asset.draft?
+        manifest.is_a?(Hash) && manifest.except('files', :files).empty?
+      else
+        asset.persisted? && !asset.status_changed?(to: 'published') && !asset.manifest_changed? &&
+          !asset.kind_changed? && !asset.attachment_changes.key?('files')
       end
     end
 

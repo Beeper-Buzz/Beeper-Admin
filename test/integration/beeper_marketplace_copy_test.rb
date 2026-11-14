@@ -46,6 +46,22 @@ class BeeperMarketplaceCopyTest < ActionDispatch::IntegrationTest
     assert_includes html, 'beeper.buzz/account/library'
   end
 
+  test 'the plain-text confirmation email points to the Library only for digital orders' do
+    buyer = create(:user)
+    asset = published_asset(price: 5, kind: 'sample_pack')
+    digital = complete_order!(creator_cart_order(buyer, [asset.variant.product, 1]))
+    physical = complete_order!(cart_order(user: create(:user)))
+
+    text = Spree::OrderMailer.confirm_email(digital.id).text_part.body.to_s
+    assert_includes text, 'Library of the Beeper app'
+    assert_includes text, 'https://beeper.buzz/account/library'
+    assert_includes text, digital.number
+
+    text = Spree::OrderMailer.confirm_email(physical.id).text_part.body.to_s
+    refute_includes text, 'beeper.buzz/account/library'
+    assert_includes text, physical.number
+  end
+
   test 'the confirmation email of a physical-only order says nothing about downloads' do
     order = complete_order!(cart_order(user: create(:user)))
 

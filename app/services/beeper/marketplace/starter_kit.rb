@@ -29,6 +29,7 @@ module Beeper
         live = product.master.live_digital_asset
 
         if live && same?(live, manifest, paths)
+          live.store_checksums! unless checksums_complete?(live)
           put_on_sale(product)
           return { status: :unchanged, product: product, asset: live }
         end
@@ -88,8 +89,15 @@ module Beeper
           asset.save!
           asset.publish!
         end
-        DigitalAssets::ChecksumJob.perform_later(asset.id)
+        # In-process: the task runs in a one-off dyno, where a job on the async queue would die
+        # with the process.
+        asset.store_checksums!
         asset
+      end
+
+      # Whether manifest["files"] holds a sha256 for every attached file.
+      def checksums_complete?(asset)
+        asset.file_entries.all? { |file| file[:sha256].present? }
       end
 
       def put_on_sale(product)

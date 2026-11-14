@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'minitest/mock'
 
 # Beeper's digital asset kinds (spec §1.5): sample_pack, effect_preset and visualizer manifests.
 class Beeper::ManifestsTest < ActiveSupport::TestCase
@@ -329,6 +330,79 @@ class Beeper::ManifestsTest < ActiveSupport::TestCase
       asset.manifest = pack([sample(root_note: 300)])
       refute asset.valid?
       assert asset.errors[:manifest].any? { |e| e.include?('samples[0].root_note must be 0..127') }
+    end
+  end
+
+  # Counts ActiveStorage::Blob#download calls while DownloadCounter.count is set.
+  module DownloadCounter
+    mattr_accessor :count
+
+    def download(*args, &block)
+      DownloadCounter.count += 1 if DownloadCounter.count
+      super
+    end
+  end
+  ActiveStorage::Blob.prepend(DownloadCounter) unless ActiveStorage::Blob < DownloadCounter
+
+  def counting_downloads
+    DownloadCounter.count = 0
+    yield
+    DownloadCounter.count
+  ensure
+    DownloadCounter.count = nil
+  end
+
+  def published_visualizer
+    asset = asset_with('visualizer', 'rings.glsl' => [SHADER, 'text/plain'])
+    asset.manifest = viz
+    asset.save!
+    asset.publish!
+  end
+
+  test 'with the kinds installed, publishing a visualizer reads its shader' do
+    with_beeper_kinds do
+      asset = asset_with('visualizer', 'rings.glsl' => [SHADER, 'text/plain'])
+      asset.manifest = viz
+      asset.save!
+      assert_operator counting_downloads { asset.publish! }, :>=, 1
+    end
+  end
+
+  test 'with the kinds installed, retiring a published visualizer downloads nothing' do
+    with_beeper_kinds do
+      asset = published_visualizer
+      downloads = counting_downloads { asset.reload.retire! }
+      assert_equal 0, downloads
+      assert asset.reload.retired?
+    end
+  end
+
+  test 'with the kinds installed, a published asset is revalidated only when its manifest or files change' do
+    with_beeper_kinds do
+      asset = published_visualizer
+      assert_equal 0, counting_downloads { asset.reload.touch && asset.save! }
+      asset.reload.manifest = viz.merge('format' => 2)
+      refute asset.valid?
+      assert asset.errors[:manifest].any? { |e| e.include?('format must be 1') }
+    end
+  end
+
+  test 'with the kinds installed, a preset whose ranges were narrowed later can still be retired' do
+    with_beeper_kinds do
+      asset = Spree::DigitalAsset.new(variant: create(:digital_product).master, kind: 'effect_preset',
+                                      manifest: preset([{ 'id' => 'reverb', 'enabled' => true, 'params' => { 'mix' => 0.9 } }]))
+      asset.files.attach(digital_blob('{}', 'preset.json', 'application/json'))
+      asset.save!
+      asset.publish!
+
+      narrowed = Beeper::Effects::DEFINITIONS.merge(
+        'reverb' => Beeper::Effects::DEFINITIONS['reverb'].merge('mix' => { 'min' => 0, 'max' => 0.5, 'default' => 0.3, 'step' => 0.01 })
+      )
+      Beeper::Effects.stub(:params, ->(id) { narrowed[id.to_s] }) do
+        assert_not_empty effect_errors(asset.manifest), 'the narrowed range rejects the stored preset'
+        asset.reload.retire!
+        assert asset.reload.retired?
+      end
     end
   end
 
