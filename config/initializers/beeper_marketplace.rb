@@ -2,7 +2,8 @@
 # creators.rb, affiliates.rb):
 # - digital asset kinds sample_pack, effect_preset and visualizer with their manifest validators
 #   (Beeper::DigitalKinds, app/services/beeper/manifests/*);
-# - uploads: .glsl shaders at most 64 KB, json manifests 256 KB (Beeper::Marketplace.apply_uploads);
+# - uploads: .glsl shaders at most 64 KB, json manifests 256 KB, .glb scenes (glTF visualizers)
+#   20 MB (Beeper::Marketplace.apply_uploads);
 # - affiliate links on https://beeper.buzz unless AFFILIATE_LINK_BASE_URL is set.
 # The creators marketplace taxon is "marketplace" (CREATORS_MARKETPLACE_TAXON), which
 # rake beeper:marketplace:seed creates.

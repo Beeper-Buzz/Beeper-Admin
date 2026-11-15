@@ -1,0 +1,93 @@
+<%# Beeper: a glTF visualizer's scene for reviewers (spec §7). An interactive 3D preview
+    (model-viewer, the GLB served through the same-origin Active Storage proxy, animations
+    playing), the poster, the audio bindings in words (Beeper::Gltf::BindingsSummary) and the GLB's
+    stats from the memoised inspection. Rendered by the overrides on the creator review page and the
+    admin digital asset page when the asset is a glTF visualizer. Local: asset. %>
+<% manifest = asset.manifest.is_a?(Hash) ? asset.manifest : {} %>
+<% files = Beeper::Manifests.attached(asset) || {} %>
+<% scene = manifest['scene'].is_a?(String) ? files[manifest['scene']] : nil %>
+<% poster = manifest['poster'].is_a?(String) ? files[manifest['poster']] : nil %>
+<% inspection = scene && scene.byte_size.to_i <= Beeper::Gltf::LIMITS['glbMaxBytes'] ? Beeper::Manifests::VisualizerGltf.inspection(scene) : nil %>
+<% stats = inspection&.stats %>
+<% view = manifest['view'].is_a?(Hash) ? manifest['view'] : {} %>
+<% background = view['background'].to_s.match?(/\A#[0-9a-fA-F]{6}\z/) ? view['background'] : '#000000' %>
+<% exposure = view['exposure'].is_a?(Numeric) ? view['exposure'] : 1 %>
+<div class="card mb-3" id="beeper_gltf_preview" data-hook="beeper_gltf_preview">
+  <div class="card-header"><h2 class="card-title mb-0 h5">3D scene (glTF visualizer)</h2></div>
+  <div class="card-body">
+    <% if scene %>
+      <script type="module" src="<%= Beeper::Gltf::MODEL_VIEWER_URL %>" integrity="<%= Beeper::Gltf::MODEL_VIEWER_INTEGRITY %>" crossorigin="anonymous"></script>
+      <model-viewer id="beeper_gltf_viewer"
+                    src="<%= main_app.rails_storage_proxy_path(scene, only_path: true) %>"
+                    <% if poster %>poster="<%= main_app.rails_storage_proxy_path(poster, only_path: true) %>"<% end %>
+                    alt="<%= scene.filename %>"
+                    camera-controls autoplay exposure="<%= exposure %>" shadow-intensity="0"
+                    style="display: block; width: 100%; height: 420px; background-color: <%= background %>;"></model-viewer>
+      <div class="d-flex align-items-center mt-2">
+        <small class="text-muted mr-2"><%= scene.filename %> &middot; <%= number_to_human_size(scene.byte_size) %>. Drag to orbit.</small>
+        <% clips = Array(stats && stats['clips']).map { |clip| clip['name'] }.reject(&:blank?) %>
+        <% if clips.size > 1 %>
+          <label class="mb-0 ml-auto mr-2 small" for="beeper_gltf_clip">Animation</label>
+          <select id="beeper_gltf_clip" class="form-control form-control-sm w-auto"
+                  onchange="document.getElementById('beeper_gltf_viewer').animationName = this.value">
+            <% clips.each do |clip| %><option value="<%= clip %>"><%= clip %></option><% end %>
+          </select>
+        <% end %>
+      </div>
+      <p class="small text-muted mb-0">The preview plays the scene's animations as authored; it does not react to audio. What the music drives is listed below.</p>
+    <% else %>
+      <p class="text-danger mb-0">The scene <code><%= manifest['scene'] %></code> is not attached.</p>
+    <% end %>
+
+    <% if poster %>
+      <h3 class="h6 mt-3">Poster</h3>
+      <%= image_tag main_app.rails_storage_proxy_path(poster, only_path: true), alt: poster.filename.to_s, style: 'max-width: 240px; max-height: 240px;' %>
+    <% end %>
+
+    <h3 class="h6 mt-3">What the music drives</h3>
+    <% sections = Beeper::Gltf::BindingsSummary.call(manifest) %>
+    <% if sections.empty? %>
+      <p class="text-muted">Nothing: the first animation loops.</p>
+    <% end %>
+    <% sections.each do |title, lines| %>
+      <div class="small font-weight-bold mt-2"><%= title %></div>
+      <ul class="small mb-1 pl-3" data-hook="beeper_gltf_<%= title.parameterize(separator: '_') %>">
+        <% lines.each do |line| %><li><code class="text-body"><%= line %></code></li><% end %>
+      </ul>
+    <% end %>
+
+    <h3 class="h6 mt-3">Scene stats</h3>
+    <% if stats %>
+      <% limits = Beeper::Gltf::LIMITS %>
+      <% draws = Beeper::Manifests::VisualizerGltf.draw_calls(manifest, inspection.summary, stats) %>
+      <dl class="row small mb-0" id="beeper_gltf_stats">
+        <dt class="col-4">Triangles</dt><dd class="col-8"><%= number_with_delimiter(stats['triangles']) %> of <%= number_with_delimiter(limits['maxTriangles']) %></dd>
+        <dt class="col-4">Vertices</dt><dd class="col-8"><%= number_with_delimiter(stats['vertices']) %> of <%= number_with_delimiter(limits['maxVertices']) %></dd>
+        <dt class="col-4">Draw calls</dt><dd class="col-8"><%= draws %> of <%= limits['maxDrawCalls'] %><%= " (#{stats['drawCalls']} + #{pluralize(draws - stats['drawCalls'], 'outline')})" if draws > stats['drawCalls'] %></dd>
+        <dt class="col-4">Scene graph</dt>
+        <dd class="col-8"><%= pluralize(stats['nodes'], 'node') %>, <%= pluralize(stats['meshes'], 'mesh') %>, <%= pluralize(stats['materials'], 'material') %>, <%= pluralize(stats['morphTargets'], 'morph target') %>, <%= pluralize(stats['skins'], 'skin') %>, <%= pluralize(stats['lights'], 'light') %>, <%= pluralize(stats['cameras'], 'camera') %></dd>
+        <dt class="col-4">Textures</dt>
+        <dd class="col-8">
+          <% if stats['images'].empty? %>none<% end %>
+          <% stats['images'].each do |image| %>
+            <div><%= image['mime'] == 'image/png' ? 'PNG' : 'JPEG' %> <%= image['width'] %>×<%= image['height'] %>, <%= number_to_human_size(image['bytes']) %></div>
+          <% end %>
+        </dd>
+        <dt class="col-4">Clips</dt>
+        <dd class="col-8">
+          <% if stats['clips'].empty? %>none<% end %>
+          <% stats['clips'].each do |clip| %>
+            <div><%= clip['name'].presence || '(unnamed)' %>: <%= Beeper::Gltf.num(clip['duration'].round(2)) %> s, <%= pluralize(clip['keyframes'], 'keyframe') %></div>
+          <% end %>
+        </dd>
+      </dl>
+    <% elsif scene %>
+      <p class="text-muted mb-0">The scene could not be read.</p>
+    <% end %>
+    <% if inspection&.errors&.any? %>
+      <ul class="small text-danger mt-2 mb-0">
+        <% inspection.errors.each do |error| %><li><%= error %></li><% end %>
+      </ul>
+    <% end %>
+  </div>
+</div>

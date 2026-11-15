@@ -2,7 +2,8 @@ module Beeper
   # Beeper's digital asset kinds (spec §1.5): what creators sell and the app can use.
   #   sample_pack    samples for the Sampler (Beeper::Manifests::SamplePack)
   #   effect_preset  settings for the app's effects rack (Beeper::Manifests::EffectPreset)
-  #   visualizer     a fragment shader scene (Beeper::Manifests::Visualizer)
+  #   visualizer     a fragment shader scene, or a glTF scene with type "gltf"
+  #                  (Beeper::Manifests::Visualizer, Beeper::Manifests::VisualizerGltf)
   #
   # config/initializers/beeper_marketplace.rb installs them in every environment but test: the
   # generic digital assets and creators tests use their own kinds, and Beeper's tests turn these on

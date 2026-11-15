@@ -1,0 +1,356 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.beeper.buzz/visualizer-gltf/1.json",
+  "title": "glTF visualizer manifest (format 1, audio schemaVersion 1)",
+  "description": "The DigitalAsset manifest of a visualizer whose type is gltf. Declarative data only: no scripts, no expressions. Unknown keys are rejected everywhere. Names (clip, node, mesh, morph, material, light node, camera node) refer to the uploaded GLB and are checked against it by the validators, not by this schema. Spec: specs/2026-11-15-creator-gltf-visualizers-design.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "type", "scene", "audio"],
+  "properties": {
+    "format": { "const": 1 },
+    "type": { "const": "gltf" },
+    "scene": { "$ref": "#/definitions/glbFile" },
+    "poster": { "$ref": "#/definitions/posterFile" },
+    "view": { "$ref": "#/definitions/view" },
+    "materials": {
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/definitions/materialOverride" }
+    },
+    "audio": { "$ref": "#/definitions/audio" },
+    "files": { "description": "Server-owned checksums (DigitalAssets::ChecksumJob). Ignored by every validator." }
+  },
+  "definitions": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "glbFile": { "type": "string", "maxLength": 255, "pattern": "^[^\\\\/]+\\.[gG][lL][bB]$" },
+    "posterFile": { "type": "string", "maxLength": 255, "pattern": "^[^\\\\/]+\\.([pP][nN][gG]|[jJ][pP][eE]?[gG]|[wW][eE][bB][pP])$" },
+    "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "range": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number" }
+    },
+    "intRange127": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "integer", "minimum": 0, "maximum": 127 }
+    },
+    "intRange15": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "integer", "minimum": 0, "maximum": 15 }
+    },
+    "fadeMs": { "type": "number", "minimum": 0, "maximum": 5000 },
+    "timeScale": { "type": "number", "minimum": 0.1, "maximum": 4 },
+
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/definitions/hexColor" },
+        "lighting": { "enum": ["studio", "scene"] },
+        "exposure": { "type": "number", "minimum": 0.25, "maximum": 4 },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "node": { "$ref": "#/definitions/name" },
+            "fov": { "type": "number", "minimum": 20, "maximum": 90 },
+            "distance": { "type": "number", "minimum": 0.5, "maximum": 10 },
+            "elevation": { "type": "number", "minimum": -80, "maximum": 80 },
+            "azimuth": { "type": "number", "minimum": -180, "maximum": 180 },
+            "orbitSpeed": { "type": "number", "minimum": -90, "maximum": 90 }
+          }
+        }
+      }
+    },
+
+    "materialOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material", "toon"],
+      "properties": {
+        "material": { "$ref": "#/definitions/name" },
+        "toon": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["steps"],
+          "properties": {
+            "steps": { "type": "integer", "minimum": 2, "maximum": 8 },
+            "outline": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["width"],
+              "properties": {
+                "width": { "type": "number", "minimum": 0.001, "maximum": 0.05 },
+                "color": { "$ref": "#/definitions/hexColor" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "idle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clips"],
+          "properties": {
+            "clips": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["clip"],
+                "properties": {
+                  "clip": { "$ref": "#/definitions/name" },
+                  "timeScale": { "$ref": "#/definitions/timeScale" }
+                }
+              }
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/definitions/binding" }
+        },
+        "noteClips": { "$ref": "#/definitions/noteClips" }
+      }
+    },
+
+    "source": {
+      "enum": [
+        "bass", "mid", "high", "level",
+        "beat", "onset", "beatPhase", "barPhase", "bpm", "playing",
+        "notePulse", "note", "noteHz",
+        "hit", "drums", "sampler", "synth",
+        "kick", "snare", "hats"
+      ]
+    },
+
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target"],
+      "oneOf": [
+        { "required": ["source"], "not": { "anyOf": [{ "required": ["sources"] }, { "required": ["combine"] }] } },
+        { "required": ["sources"], "not": { "required": ["source"] } }
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$" },
+        "source": { "$ref": "#/definitions/source" },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source"],
+            "properties": {
+              "source": { "$ref": "#/definitions/source" },
+              "weight": { "type": "number", "minimum": -4, "maximum": 4 }
+            }
+          }
+        },
+        "combine": { "enum": ["sum", "max", "avg", "mul"] },
+        "inputRange": { "$ref": "#/definitions/range" },
+        "outputRange": { "$ref": "#/definitions/range" },
+        "curve": { "enum": ["linear", "easeIn", "easeOut", "easeInOut", "exp", "step"] },
+        "steps": { "type": "integer", "minimum": 2, "maximum": 16 },
+        "smoothing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "attackMs": { "type": "number", "minimum": 0, "maximum": 5000 },
+            "releaseMs": { "type": "number", "minimum": 0, "maximum": 5000 }
+          }
+        },
+        "invert": { "type": "boolean" },
+        "target": { "$ref": "#/definitions/target" }
+      }
+    },
+
+    "target": {
+      "oneOf": [
+        { "$ref": "#/definitions/clipTarget" },
+        { "$ref": "#/definitions/morphTarget" },
+        { "$ref": "#/definitions/nodeTarget" },
+        { "$ref": "#/definitions/materialTarget" },
+        { "$ref": "#/definitions/lightTarget" },
+        { "$ref": "#/definitions/cameraTarget" }
+      ]
+    },
+    "clipTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "clip", "mode"],
+      "properties": {
+        "kind": { "const": "clip" },
+        "clip": { "$ref": "#/definitions/name" },
+        "mode": { "enum": ["speed", "weight", "scrub", "play", "trigger"] },
+        "threshold": { "type": "number", "minimum": 0.01, "maximum": 1 },
+        "fadeMs": { "$ref": "#/definitions/fadeMs" }
+      }
+    },
+    "morphTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "mesh", "morph"],
+      "properties": {
+        "kind": { "const": "morph" },
+        "mesh": { "$ref": "#/definitions/name" },
+        "morph": {
+          "oneOf": [
+            { "$ref": "#/definitions/name" },
+            { "type": "integer", "minimum": 0, "maximum": 31 }
+          ]
+        }
+      }
+    },
+    "nodeTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "node", "property"],
+      "properties": {
+        "kind": { "const": "node" },
+        "node": { "$ref": "#/definitions/name" },
+        "property": { "enum": ["position", "rotation", "scale", "spin"] },
+        "axis": { "enum": ["x", "y", "z", "xyz"] }
+      }
+    },
+    "materialTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "material", "property"],
+      "properties": {
+        "kind": { "const": "material" },
+        "material": { "$ref": "#/definitions/name" },
+        "property": { "enum": ["emissiveIntensity", "emissiveColor", "color", "hueShift", "opacity", "roughness", "metalness"] },
+        "colors": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/definitions/hexColor" }
+        }
+      }
+    },
+    "lightTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "light", "property"],
+      "properties": {
+        "kind": { "const": "light" },
+        "light": { "$ref": "#/definitions/name" },
+        "property": { "const": "intensity" }
+      }
+    },
+    "cameraTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "property"],
+      "properties": {
+        "kind": { "const": "camera" },
+        "property": { "enum": ["orbitSpeed", "dolly"] }
+      }
+    },
+
+    "noteClips": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initial", "rules"],
+      "properties": {
+        "initial": { "$ref": "#/definitions/name" },
+        "fadeMs": { "$ref": "#/definitions/fadeMs" },
+        "priority": { "enum": ["last", "velocity"] },
+        "onStop": { "enum": ["hold", "initial"] },
+        "returnAfterMs": { "type": "number", "minimum": 0, "maximum": 60000 },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/definitions/noteClipRule" }
+        }
+      }
+    },
+    "noteClipRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["match", "clip"],
+      "properties": {
+        "match": { "$ref": "#/definitions/noteMatch" },
+        "clip": { "$ref": "#/definitions/name" },
+        "mode": { "enum": ["loop", "once"] },
+        "sync": { "enum": ["now", "beat", "bar"] },
+        "fadeMs": { "$ref": "#/definitions/fadeMs" },
+        "timeScale": { "$ref": "#/definitions/timeScale" },
+        "clipBpm": { "type": "number", "minimum": 20, "maximum": 300 },
+        "velocity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["to", "range"],
+          "properties": {
+            "to": { "enum": ["weight", "timeScale"] },
+            "range": { "$ref": "#/definitions/range" }
+          }
+        }
+      }
+    },
+    "noteMatch": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["part"],
+          "oneOf": [{ "required": ["note"] }, { "required": ["notes"] }],
+          "properties": {
+            "part": { "enum": ["synth", "samplerKeys", "keys"] },
+            "note": { "type": "integer", "minimum": 0, "maximum": 127 },
+            "notes": { "$ref": "#/definitions/intRange127" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["part"],
+          "oneOf": [{ "required": ["slot"] }, { "required": ["slots"] }],
+          "properties": {
+            "part": { "const": "sampler" },
+            "slot": { "type": "integer", "minimum": 0, "maximum": 15 },
+            "slots": { "$ref": "#/definitions/intRange15" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["part"],
+          "oneOf": [{ "required": ["voice"] }, { "required": ["voices"] }],
+          "properties": {
+            "part": { "const": "drums" },
+            "voice": { "$ref": "#/definitions/drumVoice" },
+            "voices": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 9,
+              "uniqueItems": true,
+              "items": { "$ref": "#/definitions/drumVoice" }
+            }
+          }
+        }
+      ]
+    },
+    "drumVoice": { "enum": ["kick", "snare", "closed-hat", "open-hat", "clap", "low-tom", "high-tom", "rim", "mid-tom"] }
+  }
+}
