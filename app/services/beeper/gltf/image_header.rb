@@ -59,6 +59,34 @@ module Beeper
           (0xcd..0xcf).cover?(marker)
       end
 
+      PNG_IEND = [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82].freeze
+      # 0x00 bytes tolerated after an image's trailer (padding some exporters leave in the view).
+      MAX_IMAGE_PADDING = 3
+
+      # True when bytes[start, length] end with the format's trailer once up to MAX_IMAGE_PADDING
+      # trailing 0x00 bytes are dropped: PNG, a whole IEND chunk (00 00 00 00 "IEND" AE 42 60 82);
+      # JPEG, EOI (FF D9). Both trailers end in a non-zero byte, so dropping zeros first is
+      # unambiguous. A truncated image still has a readable header but decodes blank in some
+      # loaders (stb_image). hasImageTrailer in glb.ts.
+      def trailer?(bytes, mime, start = 0, length = bytes.bytesize - start)
+        finish = length
+        MAX_IMAGE_PADDING.times do
+          break unless finish.positive? && bytes.getbyte(start + finish - 1).zero?
+
+          finish -= 1
+        end
+        case mime
+        when 'image/png'
+          return false if finish < PNG_IEND.size
+
+          PNG_IEND.each_with_index.all? { |b, i| bytes.getbyte(start + finish - PNG_IEND.size + i) == b }
+        when 'image/jpeg'
+          finish >= 2 && bytes.getbyte(start + finish - 2) == 0xff && bytes.getbyte(start + finish - 1) == 0xd9
+        else
+          false
+        end
+      end
+
       # The first index in bytes[from...to] whose byte isn't 0xFF, or nil. Whole 64 KB chunks are
       # compared with a run of 0xFF (memcmp); only a chunk that differs is searched byte-wise.
       def first_not_fill(bytes, from, to)

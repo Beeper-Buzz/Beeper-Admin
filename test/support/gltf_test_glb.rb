@@ -10,7 +10,8 @@ require 'zlib'
 #
 # Faults: bad_magic, bad_version, wrong_length (header one word longer than the file),
 # external_buffer_uri, image_uri (images[0] by uri), accessor_out_of_bounds: <index>,
-# no_animation_max, extra_chunk (a third chunk after BIN).
+# no_animation_max, extra_chunk (a third chunk after BIN). Images: { mime:, width:, height:,
+# header_only:, declared_mime:, truncated: } (truncated leaves off the PNG IEND / JPEG EOI).
 module GltfTestGlb
   FLOAT = 5126
   UBYTE = 5121
@@ -28,8 +29,9 @@ module GltfTestGlb
     [data.bytesize].pack('N') + body + [Zlib.crc32(body)].pack('N')
   end
 
-  # A valid RGBA PNG (stored deflate blocks), or IHDR + IEND only when header_only.
-  def png(width, height, header_only: false, rgba: [255, 0, 128, 255])
+  # A valid RGBA PNG (stored deflate blocks) ending in IEND; IHDR + IEND only when header_only;
+  # no IEND when no_iend (a truncated file).
+  def png(width, height, header_only: false, rgba: [255, 0, 128, 255], no_iend: false)
     out = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].pack('C*')
     out << png_chunk('IHDR', [width, height, 8, 6, 0, 0, 0].pack('NNC5'))
     unless header_only
@@ -37,24 +39,25 @@ module GltfTestGlb
       raw = row * height
       out << png_chunk('IDAT', Zlib::Deflate.deflate(raw, Zlib::NO_COMPRESSION))
     end
-    out << png_chunk('IEND', ''.b)
+    out << png_chunk('IEND', ''.b) unless no_iend
     out
   end
 
-  # JPEG markers up to a valid SOF0 (header parsing only; not decodable).
-  def jpeg_header(width, height)
-    [0xff, 0xd8,
-     0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
-     0xff, 0xc0, 0x00, 0x11, 0x08, (height >> 8) & 0xff, height & 0xff, (width >> 8) & 0xff, width & 0xff,
-     0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
-     0xff, 0xd9].pack('C*')
+  # SOI, APP0, a valid SOF0, then EOI unless no_eoi (header parsing only; not decodable).
+  def jpeg_header(width, height, no_eoi: false)
+    bytes = [0xff, 0xd8,
+             0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+             0xff, 0xc0, 0x00, 0x11, 0x08, (height >> 8) & 0xff, height & 0xff, (width >> 8) & 0xff, width & 0xff,
+             0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+             0xff, 0xd9].pack('C*')
+    no_eoi ? bytes.byteslice(0, bytes.bytesize - 2) : bytes
   end
 
-  # SOI, chain empty APP0 segments, then an SOF0 of width×height (jpegChain in glb.test.ts).
+  # SOI, chain empty APP0 segments, an SOF0 of width×height, EOI (jpegChain in glb.test.ts).
   def jpeg_chain(chain, width, height)
     out = [0xff, 0xd8]
     chain.times { out.push(0xff, 0xe0, 0x00, 0x02) }
-    out.push(0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1)
+    out.push(0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1, 0xff, 0xd9)
     out.pack('C*')
   end
 
@@ -74,11 +77,11 @@ module GltfTestGlb
     out
   end
 
-  # A GLB whose only bufferView holds data, referenced by count JPEG images (imagesOnOneView).
-  def images_on_one_view(data, count)
+  # A GLB whose only bufferView holds data, referenced by count images of mime (imagesOnOneView).
+  def images_on_one_view(data, count, mime = 'image/jpeg')
     raw_glb({ 'asset' => { 'version' => '2.0' }, 'buffers' => [{ 'byteLength' => data.bytesize }],
               'bufferViews' => [{ 'buffer' => 0, 'byteLength' => data.bytesize }],
-              'images' => Array.new(count) { { 'bufferView' => 0, 'mimeType' => 'image/jpeg' } } }, data)
+              'images' => Array.new(count) { { 'bufferView' => 0, 'mimeType' => mime } } }, data)
   end
 
   # Arrays nested depth deep ([] is depth 1).
@@ -297,7 +300,11 @@ module GltfTestGlb
     end
 
     def image(spec, index)
-      bytes = spec[:mime] == 'image/png' ? GltfTestGlb.png(spec[:width], spec[:height], header_only: spec[:header_only]) : GltfTestGlb.jpeg_header(spec[:width], spec[:height])
+      bytes = if spec[:mime] == 'image/png'
+                GltfTestGlb.png(spec[:width], spec[:height], header_only: spec[:header_only], no_iend: spec[:truncated])
+              else
+                GltfTestGlb.jpeg_header(spec[:width], spec[:height], no_eoi: spec[:truncated])
+              end
       mime = spec[:declared_mime] || spec[:mime]
       return { 'uri' => 'texture.png', 'mimeType' => mime } if @faults[:image_uri] && index.zero?
 

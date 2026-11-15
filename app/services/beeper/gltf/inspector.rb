@@ -457,7 +457,8 @@ module Beeper
             start = @view_start[view]
             length = @view_length[view]
             sniffed = ImageHeader.sniff(@bytes, start, length)
-            { mime: sniffed, size: sniffed && ImageHeader.size(@bytes, sniffed, start, length) }
+            { mime: sniffed, size: sniffed && ImageHeader.size(@bytes, sniffed, start, length),
+              complete: !sniffed.nil? && ImageHeader.trailer?(@bytes, sniffed, start, length) }
           end
           kind = mime == 'image/png' ? 'PNG' : 'JPEG'
           if head[:mime] != mime
@@ -467,6 +468,10 @@ module Beeper
           size = head[:size]
           if size.nil?
             err(path, "can't read the #{kind} header")
+            next
+          end
+          unless head[:complete]
+            err(path, "the #{kind} is cut short (no #{kind == 'PNG' ? 'IEND' : 'EOI'})")
             next
           end
           if size[:width] > max || size[:height] > max

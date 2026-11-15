@@ -282,6 +282,90 @@ class Beeper::GltfInspectorTest < ActiveSupport::TestCase
     assert_equal [], inspect_glb(bytes).errors
   end
 
+  # --- image trailers (glb.test.ts "image trailers") ----------------------------------------------
+
+  def trailer_png
+    G.png(4, 4)
+  end
+
+  def trailer_jpeg
+    G.jpeg_header(640, 480)
+  end
+
+  def one_image(data, mime)
+    inspect_glb(G.images_on_one_view(data, 1, mime)).errors
+  end
+
+  def cat(bytes, tail)
+    bytes + tail.pack('C*')
+  end
+
+  PNG_CUT = 'scene.images[0]: the PNG is cut short (no IEND)'.freeze
+  JPEG_CUT = 'scene.images[0]: the JPEG is cut short (no EOI)'.freeze
+
+  test 'image trailers: complete PNG and JPEG pass and are counted' do
+    header = Beeper::Gltf::ImageHeader
+    assert_equal [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82], trailer_png.byteslice(-12, 12).bytes
+    assert_equal [0xff, 0xd9], trailer_jpeg.byteslice(-2, 2).bytes
+    assert header.trailer?(trailer_png, 'image/png')
+    assert header.trailer?(trailer_jpeg, 'image/jpeg')
+    assert header.trailer?(G.png(3000, 20, header_only: true), 'image/png')
+    assert_equal [], one_image(trailer_png, 'image/png')
+    result = inspect_glb(G.images_on_one_view(trailer_jpeg, 1))
+    assert_equal [], result.errors
+    assert_equal [[640, 480]], result.stats['images'].map { |i| i.values_at('width', 'height') }
+  end
+
+  test 'image trailers: PNG without IEND' do
+    assert_equal [PNG_CUT], inspect_glb(G.build(simple(images: [{ mime: 'image/png', width: 4, height: 4, truncated: true }]))).errors
+    assert_equal [PNG_CUT], one_image(trailer_png.byteslice(0, trailer_png.bytesize - 1), 'image/png') # one CRC byte short
+    assert_equal [PNG_CUT], one_image(trailer_png.byteslice(0, trailer_png.bytesize - 30), 'image/png') # inside IDAT
+    bad_crc = trailer_png.dup
+    bad_crc.setbyte(bad_crc.bytesize - 1, bad_crc.getbyte(bad_crc.bytesize - 1) ^ 1)
+    assert_equal [PNG_CUT], one_image(bad_crc, 'image/png')
+    # Cut-short images add no stats or pixels.
+    stats = inspect_glb(G.images_on_one_view(trailer_png.byteslice(0, trailer_png.bytesize - 1), 1, 'image/png')).stats
+    assert_equal [], stats['images']
+    assert_equal 0, stats['texturePixels']
+  end
+
+  test 'image trailers: JPEG without EOI' do
+    assert_equal [JPEG_CUT], inspect_glb(G.build(simple(images: [{ mime: 'image/jpeg', width: 8, height: 8, truncated: true }]))).errors
+    assert_equal [JPEG_CUT], one_image(G.jpeg_header(8, 8, no_eoi: true), 'image/jpeg')
+    assert_equal [JPEG_CUT], one_image(trailer_jpeg.byteslice(0, trailer_jpeg.bytesize - 1), 'image/jpeg')
+    assert_equal [JPEG_CUT], one_image(cat(trailer_jpeg, [0x12]), 'image/jpeg') # junk after EOI
+  end
+
+  test 'image trailers: an unreadable header is reported instead of the trailer' do
+    assert_equal ["scene.images[0]: can't read the PNG header"], one_image(G.png(4, 4).byteslice(0, 20), 'image/png')
+  end
+
+  test 'image trailers: padding: up to 3 trailing 0x00 bytes after the trailer, nothing else' do
+    [1, 2, 3].each do |k|
+      zeros = Array.new(k, 0)
+      assert_equal [], one_image(cat(trailer_png, zeros), 'image/png'), "PNG + #{k}"
+      assert_equal [], one_image(cat(trailer_jpeg, zeros), 'image/jpeg'), "JPEG + #{k}"
+    end
+    assert_equal [PNG_CUT], one_image(cat(trailer_png, [0, 0, 0, 0]), 'image/png')
+    assert_equal [JPEG_CUT], one_image(cat(trailer_jpeg, [0, 0, 0, 0]), 'image/jpeg')
+    assert_equal [PNG_CUT], one_image(cat(trailer_png, [0x20]), 'image/png')
+    assert_equal [JPEG_CUT], one_image(cat(trailer_jpeg, [0, 0xff]), 'image/jpeg')
+  end
+
+  test 'image trailers: the trailer result is memoised per bufferView like the header' do
+    errors = inspect_glb(G.images_on_one_view(G.jpeg_header(8, 8, no_eoi: true), 3)).errors
+    assert_equal((0..2).map { |i| "scene.images[#{i}]: the JPEG is cut short (no EOI)" }, errors)
+  end
+
+  test 'image trailers: read in place at an offset, the bytes after the view do not count' do
+    header = Beeper::Gltf::ImageHeader
+    inside = 'ab'.b + G.jpeg_header(8, 8, no_eoi: true) + [0xff, 0xd9].pack('C*')
+    refute header.trailer?(inside, 'image/jpeg', 2, inside.bytesize - 4) # the EOI lies past the view
+    assert header.trailer?(inside, 'image/jpeg', 2, inside.bytesize - 2)
+    refute header.trailer?(trailer_png, 'image/webp')
+    refute header.trailer?(''.b, 'image/jpeg')
+  end
+
   # --- work bounds against crafted files (glb.test.ts "work bounds") ------------------------------
   # Time bounds are the TS ones; Ruby is slower than V8, so each is doubled.
 
