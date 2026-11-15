@@ -1,3 +1,6 @@
+require 'set'
+require 'strscan'
+
 module Beeper
   module Gltf
     # GLB inspection (spec §6.3): structure, self-containment, limits, and the scene summary the
@@ -16,8 +19,15 @@ module Beeper
     #                   #   "keyframes" }], "keyframes" } | nil
     #
     # summary and stats are nil when the file is not a readable GLB (header, chunks or JSON).
+    #
+    # Work is bounded against crafted files, with the TypeScript core's numbers and messages: at
+    # most MAX_ERRORS errors and one "scene: …and N more problems"; an array longer than
+    # SKIP_FACTOR × its limit (MAX_UNBOUNDED_ARRAY without one) gets one error and counts as empty;
+    # only the first maxImages images are inspected, each bufferView's header read once, in place;
+    # JPEG scans stop after MAX_JPEG_MARKERS markers. result.capped says a cap was hit (such results
+    # are not memoised).
     class Inspector
-      Result = Struct.new(:errors, :summary, :stats) do
+      Result = Struct.new(:errors, :summary, :stats, :capped) do
         def ok?
           errors.empty?
         end
@@ -31,20 +41,57 @@ module Beeper
       TYPE_COMPONENTS = { 'SCALAR' => 1, 'VEC2' => 2, 'VEC3' => 3, 'VEC4' => 4, 'MAT2' => 4, 'MAT3' => 9, 'MAT4' => 16 }.freeze
       INDEX_SIZES = { 5121 => 1, 5123 => 2, 5125 => 4 }.freeze
 
+      # Work bounds (the same numbers and messages as glb.ts).
+      MAX_ERRORS = 100
+      SKIP_FACTOR = 4
+      MAX_UNBOUNDED_ARRAY = 65_536
+      # Nesting deeper than 100 is refused in both TS and Ruby, by the same pre-parse bracket scan.
+      MAX_JSON_DEPTH = 100
+      MAX_JPEG_MARKERS = ImageHeader::MAX_JPEG_MARKERS
+
       def self.call(bytes, limits = Gltf::LIMITS)
         new(bytes, limits).call
+      end
+
+      # True when JSON text nests arrays/objects deeper than max (jsonTooDeep in glb.ts): outside
+      # strings '[' and '{' add one and ']' and '}' subtract one; '"' opens a string, inside which
+      # a backslash skips the next character and '"' closes it. The outermost value is depth 1.
+      # Runs before parsing, so it decides for invalid JSON too.
+      def self.json_too_deep?(text, max = MAX_JSON_DEPTH)
+        scanner = StringScanner.new(text)
+        depth = 0
+        until scanner.eos?
+          scanner.skip(/[^"\[\]{}]+/)
+          case scanner.getch
+          when '"'
+            scanner.skip(/(?>[^"\\]+|\\.)*/m)
+            scanner.getch # the closing quote, or a backslash ending the text
+          when '[', '{'
+            depth += 1
+            return true if depth > max
+          when ']', '}'
+            depth -= 1
+          end
+        end
+        false
       end
 
       def initialize(bytes, limits = Gltf::LIMITS)
         @bytes = bytes.encoding == Encoding::BINARY ? bytes : bytes.dup.force_encoding(Encoding::BINARY)
         @limits = limits
         @errors = []
+        @dropped = 0
+        @capped = false
       end
 
       def call
         header_error = read_container
         return fatal(header_error) if header_error
 
+        # Arrays inspected only for their length.
+        %w[samplers textures scenes].each do |key|
+          capped("scene.#{key}", key, @json[key], nil) if @json[key].is_a?(Array)
+        end
         check_asset_and_extensions
         check_buffers
         check_buffer_views
@@ -82,7 +129,11 @@ module Beeper
           'clips' => clips,
           'keyframes' => keyframes
         }
-        Result.new(@errors, summary, stats)
+        if @dropped.positive?
+          @capped = true
+          @errors << "scene: …and #{@dropped} more problem#{@dropped == 1 ? '' : 's'}"
+        end
+        Result.new(@errors, summary, stats, @capped)
       end
 
       private
@@ -91,13 +142,28 @@ module Beeper
         @limits.fetch(key)
       end
 
+      # Keeps the first MAX_ERRORS errors; the rest are counted for one closing line.
       def err(path, message)
-        @errors << "#{path}: #{message}"
+        if @errors.size < MAX_ERRORS
+          @errors << "#{path}: #{message}"
+        else
+          @dropped += 1
+        end
       end
 
       def fatal(message)
         @errors << "scene: #{message}"
-        Result.new(@errors, nil, nil)
+        Result.new(@errors, nil, nil, false)
+      end
+
+      # Over SKIP_FACTOR × limit (or MAX_UNBOUNDED_ARRAY without one): one "<n> <noun>; the limit is
+      # <limit>" error and the array counts as empty from then on, so nothing iterates it.
+      def capped(path, noun, array, limit)
+        return array if array.size <= (limit.nil? ? MAX_UNBOUNDED_ARRAY : SKIP_FACTOR * limit)
+
+        @capped = true
+        err(path, "#{array.size} #{noun}; the limit is #{limit.nil? ? MAX_UNBOUNDED_ARRAY : limit}")
+        []
       end
 
       def u32(offset)
@@ -140,6 +206,7 @@ module Beeper
 
         text = @bytes.byteslice(20, json_length).force_encoding(Encoding::UTF_8)
         return 'the JSON chunk is not valid UTF-8' unless text.valid_encoding?
+        return 'JSON nested too deeply' if self.class.json_too_deep?(text)
 
         begin
           @json = JSON.parse(text)
@@ -166,12 +233,13 @@ module Beeper
         nil
       end
 
-      # json[key] as an array; absent → []; anything else is an error (once) and [].
-      def array_of(key)
+      # json[key] as an array; absent → []; anything else is an error (once) and []; longer than
+      # the cap for limit (see #capped) → one error and [].
+      def array_of(key, limit = nil)
         return [] unless @json.key?(key)
 
         value = @json[key]
-        return value if value.is_a?(Array)
+        return capped("scene.#{key}", key, value, limit) if value.is_a?(Array)
 
         err("scene.#{key}", 'must be an array')
         []
@@ -192,8 +260,11 @@ module Beeper
             err('scene.extensionsUsed', "#{ext}: #{why}")
           end
         end
+        used = @used.select { |ext| ext.is_a?(String) }.to_set # linear, not include? per entry
         array_of('extensionsRequired').each do |ext|
-          err('scene.extensionsRequired', "#{Gltf.js_string(ext)} is not listed in extensionsUsed") unless @used.include?(ext)
+          next if ext.is_a?(String) && used.include?(ext)
+
+          err('scene.extensionsRequired', "#{Gltf.js_string(ext)} is not listed in extensionsUsed")
         end
       end
 
@@ -349,15 +420,17 @@ module Beeper
         int?(ref) && ref >= 0 && ref < @acc_count.size ? @acc_count[ref.to_i] : -1
       end
 
-      # Embedded PNG/JPEG, header dimensions within the limits. Returns [image stats, pixels].
+      # Embedded PNG/JPEG, header dimensions within the limits. Returns [image stats, pixels]. Past
+      # maxImages only the count error is reported; headers are read once per bufferView, in place.
       def check_images
-        images = array_of('images')
+        images = array_of('images', lim('maxImages'))
         err('scene.images', "#{images.size} images; the limit is #{lim('maxImages')}") if images.size > lim('maxImages')
         stats = []
+        headers = {} # bufferView index → { mime: sniffed, size: }
         pixels = 0
         mimes = lim('imageMimeTypes')
         max = lim('maxTextureSize')
-        images.each_with_index do |image, i|
+        images.first(lim('maxImages')).each_with_index do |image, i|
           path = "scene.images[#{i}]"
           unless obj?(image)
             err(path, 'must be an object')
@@ -380,13 +453,18 @@ module Beeper
           view = view.to_i
           next unless @view_ok[view] # its bufferView already has an error
 
-          data = @bytes.byteslice(@view_start[view], @view_length[view])
+          head = headers[view] ||= begin
+            start = @view_start[view]
+            length = @view_length[view]
+            sniffed = ImageHeader.sniff(@bytes, start, length)
+            { mime: sniffed, size: sniffed && ImageHeader.size(@bytes, sniffed, start, length) }
+          end
           kind = mime == 'image/png' ? 'PNG' : 'JPEG'
-          if ImageHeader.sniff(data) != mime
+          if head[:mime] != mime
             err(path, "the bytes are not a #{kind} (mimeType says #{mime})")
             next
           end
-          size = ImageHeader.size(data, mime)
+          size = head[:size]
           if size.nil?
             err(path, "can't read the #{kind} header")
             next
@@ -406,15 +484,19 @@ module Beeper
 
       # Scene graph counts against the limits.
       def check_counts
-        @nodes = array_of('nodes')
-        @meshes = array_of('meshes')
-        @materials = array_of('materials')
-        @skins = array_of('skins')
-        @cameras = array_of('cameras')
-        @animations = array_of('animations')
+        @nodes = array_of('nodes', lim('maxNodes'))
+        @meshes = array_of('meshes', lim('maxMeshes'))
+        @materials = array_of('materials', lim('maxMaterials'))
+        @skins = array_of('skins', lim('maxSkins'))
+        @cameras = array_of('cameras', lim('maxCameras'))
+        @animations = array_of('animations', lim('maxAnimations'))
         extensions = @json['extensions']
         lights_ext = obj?(extensions) && obj?(extensions['KHR_lights_punctual']) ? extensions['KHR_lights_punctual'] : nil
-        @lights = lights_ext && lights_ext['lights'].is_a?(Array) ? lights_ext['lights'] : []
+        @lights = if lights_ext && lights_ext['lights'].is_a?(Array)
+                    capped('scene.extensions.KHR_lights_punctual.lights', 'lights', lights_ext['lights'], lim('maxLights'))
+                  else
+                    []
+                  end
         limit_error('scene.nodes', @nodes.size, 'maxNodes', 'nodes')
         limit_error('scene.meshes', @meshes.size, 'maxMeshes', 'meshes')
         limit_error('scene.materials', @materials.size, 'maxMaterials', 'materials')
@@ -442,9 +524,10 @@ module Beeper
           vertices = 0
           targets = 0
           materials = []
-          primitives = obj?(mesh) && mesh['primitives'].is_a?(Array) ? mesh['primitives'] : nil
-          err("#{path}.primitives", 'must be an array') unless primitives
-          (primitives || []).each_with_index do |prim, p|
+          listed = obj?(mesh) && mesh['primitives'].is_a?(Array)
+          primitives = listed ? capped("#{path}.primitives", 'primitives', mesh['primitives'], lim('maxDrawCalls')) : []
+          err("#{path}.primitives", 'must be an array') unless listed
+          primitives.each_with_index do |prim, p|
             pp = "#{path}.primitives[#{p}]"
             unless obj?(prim) && obj?(prim['attributes'])
               err("#{pp}.attributes", 'must be an object')
@@ -489,7 +572,8 @@ module Beeper
           out[:morph_targets] += targets
           extras = obj?(mesh) && obj?(mesh['extras']) ? mesh['extras'] : nil
           names = extras && extras['targetNames'].is_a?(Array) ? extras['targetNames'] : []
-          morphs = Array.new(targets) { |t| names[t].is_a?(String) ? names[t] : '' }
+          # Names are listed only up to SKIP_FACTOR × the limit; past the limit the error above stands.
+          morphs = targets <= SKIP_FACTOR * lim('maxMorphTargets') ? Array.new(targets) { |t| names[t].is_a?(String) ? names[t] : '' } : []
           out[:summaries] << { 'name' => name_of(mesh), 'morphs' => morphs }
           out[:triangles] << triangles
           out[:vertices] << vertices
@@ -566,7 +650,7 @@ module Beeper
         keyframes = 0
         @animations.each_with_index do |animation, i|
           path = "scene.animations[#{i}]"
-          samplers = obj?(animation) && animation['samplers'].is_a?(Array) ? animation['samplers'] : []
+          samplers = obj?(animation) && animation['samplers'].is_a?(Array) ? capped("#{path}.samplers", 'samplers', animation['samplers'], nil) : []
           duration = 0
           keys = 0
           samplers.each_with_index do |sampler, j|

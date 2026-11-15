@@ -7,7 +7,7 @@ module Beeper
   #
   #   Beeper::Gltf::Inspector         GLB structure, self-containment, limits, scene summary, stats
   #   Beeper::Gltf::ImageHeader       PNG/JPEG sniffing and header dimensions
-  #   Beeper::Gltf::InspectionCache   inspections memoised per blob checksum (a small LRU)
+  #   Beeper::Gltf::InspectionCache   inspections memoised per blob (a small LRU)
   #   Beeper::Gltf::BindingsSummary   one readable line per binding / rule, for the review page
   #   Beeper::Manifests::VisualizerGltf  the manifest validator (structure, semantics, names, files)
   module Gltf

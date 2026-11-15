@@ -50,6 +50,44 @@ module GltfTestGlb
      0xff, 0xd9].pack('C*')
   end
 
+  # SOI, chain empty APP0 segments, then an SOF0 of width×height (jpegChain in glb.test.ts).
+  def jpeg_chain(chain, width, height)
+    out = [0xff, 0xd8]
+    chain.times { out.push(0xff, 0xe0, 0x00, 0x02) }
+    out.push(0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1)
+    out.pack('C*')
+  end
+
+  # --- raw GLBs (work-bound tests) ----------------------------------------------------------------
+
+  # A GLB from a JSON hash and BIN bytes, no builder conveniences (rawGlb in glb.test.ts).
+  def raw_glb(json, bin)
+    text = JSON.generate(json, max_nesting: false).b
+    json_length = (text.bytesize + 3) & ~3
+    bin_length = (bin.bytesize + 3) & ~3
+    total = 12 + 8 + json_length + (bin.bytesize.positive? ? 8 + bin_length : 0)
+    out = [0x46546c67, 2, total, json_length, 0x4e4f534a].pack('V5')
+    out << text << (' ' * (json_length - text.bytesize)).b
+    if bin.bytesize.positive?
+      out << [bin_length, 0x004e4942].pack('V2') << bin.b << ("\0" * (bin_length - bin.bytesize)).b
+    end
+    out
+  end
+
+  # A GLB whose only bufferView holds data, referenced by count JPEG images (imagesOnOneView).
+  def images_on_one_view(data, count)
+    raw_glb({ 'asset' => { 'version' => '2.0' }, 'buffers' => [{ 'byteLength' => data.bytesize }],
+              'bufferViews' => [{ 'buffer' => 0, 'byteLength' => data.bytesize }],
+              'images' => Array.new(count) { { 'bufferView' => 0, 'mimeType' => 'image/jpeg' } } }, data)
+  end
+
+  # Arrays nested depth deep ([] is depth 1).
+  def nest(depth)
+    value = []
+    (depth - 1).times { value = [value] }
+    value
+  end
+
   # --- geometry ----------------------------------------------------------------------------------
 
   # One triangle in the XY plane.
@@ -168,7 +206,7 @@ module GltfTestGlb
       json['extensionsRequired'] = @spec[:extensions_required] if @spec[:extensions_required]
       %w[meshes materials animations accessors bufferViews].each { |key| json.delete(key) if json[key] == [] }
       @spec[:edit_json]&.call(json)
-      assemble(JSON.generate(json).b)
+      assemble(JSON.generate(json, max_nesting: false).b)
     end
 
     private

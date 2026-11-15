@@ -155,6 +155,24 @@ class Beeper::GltfInspectorTest < ActiveSupport::TestCase
     expect_error(sparse.call(34), 'scene.accessors[0].sparse.indices')
   end
 
+  test 'sparse values are bounds-checked too' do
+    # Accessor 0 is the cube's POSITION (VEC3 float, 12-byte elements); values sit in the 36-byte
+    # index bufferView: 3 elements fit (36 bytes), 4 do not.
+    sparse = lambda do |count|
+      G.build(simple(edit_json: lambda { |j|
+        idx_view = j['accessors'][j['meshes'][0]['primitives'][0]['indices']]['bufferView']
+        j['accessors'][0]['sparse'] = { 'count' => count, 'indices' => { 'bufferView' => idx_view, 'componentType' => 5121 },
+                                        'values' => { 'bufferView' => idx_view } }
+      }))
+    end
+    assert_equal [], inspect_glb(sparse.call(3)).errors
+    expect_error(sparse.call(4), 'scene.accessors[0].sparse.values', LIMITS, /needs bytes 0..48 of bufferView 2, which has 36/)
+    expect_error(G.build(simple(edit_json: ->(j) { j['accessors'][0]['sparse'] = { 'count' => 1, 'indices' => { 'bufferView' => 0, 'componentType' => 5121 } } })),
+                 'scene.accessors[0].sparse.values', LIMITS, /needs a bufferView/)
+    expect_error(G.build(simple(edit_json: ->(j) { j['accessors'][0]['sparse'] = { 'count' => 1, 'indices' => { 'bufferView' => 0, 'componentType' => 5121 }, 'values' => { 'bufferView' => 0, 'byteOffset' => -4 } } })),
+                 'scene.accessors[0].sparse.values.byteOffset')
+  end
+
   test 'images: embedded, PNG/JPEG, magic, header size limits' do
     expect_error(G.build(simple(images: [{ mime: 'image/png', width: 2, height: 2 }], faults: { image_uri: true })), 'scene.images[0].uri')
     expect_error(G.build(simple(images: [{ mime: 'image/png', width: 2, height: 2, declared_mime: 'image/webp' }])), 'scene.images[0].mimeType')
@@ -185,25 +203,25 @@ class Beeper::GltfInspectorTest < ActiveSupport::TestCase
   # --- counts against limits ---------------------------------------------------------------------
 
   {
-    { maxNodes: 8 } => 'scene.nodes',
-    { maxMeshes: 1 } => 'scene.meshes',
-    { maxMaterials: 4 } => 'scene.materials',
-    { maxTriangles: 36 } => 'scene',
-    { maxVertices: 26 } => 'scene',
-    { maxDrawCalls: 3 } => 'scene',
-    { maxAnimations: 5 } => 'scene.animations',
-    { maxKeyframes: 16 } => 'scene.animations',
-    { maxAnimationSeconds: 3 } => 'scene.animations[5]',
-    { maxMorphTargets: 1 } => 'scene.meshes[0]',
-    { maxSkins: 0 } => 'scene.skins',
-    { maxJoints: 0 } => 'scene.skins[0].joints',
-    { maxLights: 0 } => 'scene.extensions.KHR_lights_punctual.lights',
-    { maxCameras: 0 } => 'scene.cameras',
-    { glbMaxBytes: 100 } => 'scene',
-    { jsonChunkMaxBytes: 100 } => 'scene'
-  }.each do |over, path|
+    { maxNodes: 8 } => ['scene.nodes', /\Ascene\.nodes: 9 nodes; the limit is 8\z/],
+    { maxMeshes: 1 } => ['scene.meshes', /: 2 meshes; the limit is 1\z/],
+    { maxMaterials: 4 } => ['scene.materials', /: 5 materials; the limit is 4\z/],
+    { maxTriangles: 36 } => ['scene', /\Ascene: 37 triangles; the limit is 36\z/],
+    { maxVertices: 26 } => ['scene', /\Ascene: 27 vertices; the limit is 26\z/],
+    { maxDrawCalls: 3 } => ['scene', /\Ascene: 4 draw calls; the limit is 3\z/],
+    { maxAnimations: 5 } => ['scene.animations', /: 6 animations; the limit is 5\z/],
+    { maxKeyframes: 16 } => ['scene.animations', /: 17 keyframes; the limit is 16\z/],
+    { maxAnimationSeconds: 3 } => ['scene.animations[5]', /: 4 s long; the limit is 3 s\z/],
+    { maxMorphTargets: 1 } => ['scene.meshes[0]', /: 2 morph targets; the limit is 1\z/],
+    { maxSkins: 0 } => ['scene.skins', /\Ascene\.skins: 1 skins; the limit is 0\z/],
+    { maxJoints: 0 } => ['scene.skins[0].joints', /: 1 joints; the limit is 0\z/],
+    { maxLights: 0 } => ['scene.extensions.KHR_lights_punctual.lights', /: 1 lights; the limit is 0\z/],
+    { maxCameras: 0 } => ['scene.cameras', /\Ascene\.cameras: 1 cameras; the limit is 0\z/],
+    { glbMaxBytes: 100 } => ['scene', /\Ascene: the file is [\d.]+ MB; the limit is 0\.0 MB\z/],
+    { jsonChunkMaxBytes: 100 } => ['scene', /\Ascene: the JSON chunk is [\d.]+ MB; the limit is 0\.0 MB\z/]
+  }.each do |over, (path, message)|
     test "counts: #{over.keys.first} → #{path}" do
-      expect_error(G.fixture_glb, path, limits(over))
+      expect_error(G.fixture_glb, path, limits(over), message)
     end
   end
 
@@ -262,5 +280,265 @@ class Beeper::GltfInspectorTest < ActiveSupport::TestCase
   test 'a UTF-8 String of GLB bytes is read as binary' do
     bytes = G.build(simple).dup.force_encoding(Encoding::UTF_8)
     assert_equal [], inspect_glb(bytes).errors
+  end
+
+  # --- work bounds against crafted files (glb.test.ts "work bounds") ------------------------------
+  # Time bounds are the TS ones; Ruby is slower than V8, so each is doubled.
+
+  MAX_ERRORS = Beeper::Gltf::Inspector::MAX_ERRORS
+  BIG_JSON = { jsonChunkMaxBytes: 4 << 20 }.freeze
+
+  def elapsed_ms
+    t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+    ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
+  end
+
+  test 'work bounds: the constants are the TS ones' do
+    inspector = Beeper::Gltf::Inspector
+    assert_equal [100, 4, 65_536, 100, 512],
+                 [inspector::MAX_ERRORS, inspector::SKIP_FACTOR, inspector::MAX_UNBOUNDED_ARRAY, inspector::MAX_JSON_DEPTH, inspector::MAX_JPEG_MARKERS]
+  end
+
+  test 'work bounds: 50k images on one bufferView: one count error, no header parsing' do
+    glb = G.images_on_one_view(G.jpeg_header(8, 8), 50_000)
+    result = nil
+    ms = elapsed_ms { result = inspect_glb(glb, limits(BIG_JSON)) }
+    assert_equal ['scene.images: 50000 images; the limit is 16'], result.errors
+    assert_equal [], result.stats['images']
+    assert result.capped
+    assert_operator ms, :<, 4000
+  end
+
+  test 'work bounds: over maxImages but under 4× the limit: only the first maxImages are inspected' do
+    result = inspect_glb(G.images_on_one_view(G.jpeg_header(8, 8), 40))
+    assert_equal ['scene.images: 40 images; the limit is 16'], result.errors
+    assert_equal (0...16).to_a, result.stats['images'].map { |i| i['index'] }
+    assert_equal 16 * 64, result.stats['texturePixels']
+    refute result.capped
+  end
+
+  test 'work bounds: a header is parsed once per bufferView (a 1 MB fill-byte run × 50k images stays fast)' do
+    slow = ("\xff".b * (1 << 20))
+    slow.setbyte(1, 0xd8) # SOI, then fill bytes to the end: one parse walks the whole view
+    glb = G.images_on_one_view(slow, 50_000)
+    errors = nil
+    ms = elapsed_ms { errors = inspect_glb(glb, limits(BIG_JSON.merge(maxImages: 100_000))).errors }
+    assert_operator ms, :<, 6000
+    assert_equal MAX_ERRORS + 1, errors.size
+    assert_equal "scene.images[0]: can't read the JPEG header", errors[0]
+    assert_equal "scene: …and #{50_000 - MAX_ERRORS} more problems", errors[MAX_ERRORS]
+  end
+
+  test 'work bounds: the JPEG marker scan stops after MAX_JPEG_MARKERS markers' do
+    header = Beeper::Gltf::ImageHeader
+    assert_equal({ width: 640, height: 480 }, header.size(G.jpeg_chain(511, 640, 480), 'image/jpeg')) # SOF is marker 512
+    assert_nil header.size(G.jpeg_chain(512, 640, 480), 'image/jpeg') # SOF would be marker 513
+    assert_equal ["scene.images[0]: can't read the JPEG header"], inspect_glb(G.images_on_one_view(G.jpeg_chain(100_000, 64, 64), 1)).errors
+    assert_equal [], inspect_glb(G.images_on_one_view(G.jpeg_chain(511, 64, 64), 1)).errors
+  end
+
+  # glb.ts's JPEG scan, byte by byte (fill bytes stepped one at a time), to check the Ruby
+  # version's String#index fill skip against.
+  def reference_jpeg_size(bytes, start, n)
+    b = ->(i) { bytes.getbyte(start + i) }
+    return nil unless n >= 3 && b.call(0) == 0xff && b.call(1) == 0xd8 && b.call(2) == 0xff
+
+    i = 2
+    markers = 0
+    while i + 1 < n
+      return nil if b.call(i) != 0xff
+      return nil if (markers += 1) > 512
+
+      m = b.call(i + 1)
+      while m == 0xff && i + 2 < n
+        i += 1
+        m = b.call(i + 1)
+      end
+      i += 2
+      next if m == 0xd8 || m == 0x01 || (0xd0..0xd7).cover?(m)
+      return nil if [0xd9, 0xda].include?(m) || i + 2 > n
+
+      len = (b.call(i) << 8) | b.call(i + 1)
+      return nil if len < 2
+
+      if Beeper::Gltf::ImageHeader.jpeg_sof?(m)
+        return nil if i + 7 > n
+
+        h = (b.call(i + 3) << 8) | b.call(i + 4)
+        w = (b.call(i + 5) << 8) | b.call(i + 6)
+        return w.positive? && h.positive? ? { width: w, height: h } : nil
+      end
+      i += len
+    end
+    nil
+  end
+
+  test 'work bounds: the fill-byte skip stops exactly where the byte-by-byte scan does' do
+    sof = [0xc0, 0x00, 0x11, 0x08, 0x00, 0x20, 0x00, 0x40, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1]
+    cases = []
+    [0, 1, 2, 5, 65_533, 65_534, 65_535, 65_536, 131_072, 140_000].each do |fill| # and across 64 KB chunks
+      cases << ([0xff, 0xd8, 0xff] + ([0xff] * fill) + sof)                   # fill before SOF
+      cases << ([0xff, 0xd8, 0xff, 0xe0, 0, 2, 0xff] + ([0xff] * fill) + sof) # after an APP0
+      cases << ([0xff, 0xd8] + ([0xff] * (fill + 1)))                          # fill to the end
+      cases << ([0xff, 0xd8, 0xff] + ([0xff] * fill) + [0xd9])                 # fill, then EOI
+    end
+    srand(1234)
+    40.times { cases << ([0xff, 0xd8, 0xff] + Array.new(rand(4..40)) { [0xff, 0xff, 0xc0, 0xd8, 0x00, 0x02, rand(256)].sample }) }
+    header = Beeper::Gltf::ImageHeader
+    sized = 0
+    cases.each do |list|
+      data = list.pack('C*')
+      # Whole, inside a larger buffer, and cut short inside a run of 0xFF that continues past the view.
+      [[data, 0, data.bytesize], [('ab'.b + data + ("\xff".b * 9)), 2, data.bytesize], [(data + ("\xff".b * 9)), 0, data.bytesize]].each do |bytes, start, n|
+        expected = reference_jpeg_size(bytes, start, n)
+        actual = header.size(bytes, 'image/jpeg', start, n)
+        expected.nil? ? assert_nil(actual, list.inspect) : assert_equal(expected, actual, list.inspect)
+        sized += 1 if expected
+      end
+    end
+    assert_operator sized, :>=, 24 # the SOF cases did yield sizes
+  end
+
+  test 'work bounds: 16 images on 16 bufferViews over one 18 MB run of 0xFF stay fast' do
+    run = "\xff".b * (18 << 20)
+    run.setbyte(1, 0xd8)
+    json = { 'asset' => { 'version' => '2.0' }, 'buffers' => [{ 'byteLength' => run.bytesize }],
+             'bufferViews' => Array.new(16) { |i| { 'buffer' => 0, 'byteLength' => run.bytesize - i } },
+             'images' => Array.new(16) { |i| { 'bufferView' => i, 'mimeType' => 'image/jpeg' } } }
+    glb = G.raw_glb(json, run)
+    errors = nil
+    ms = elapsed_ms { errors = inspect_glb(glb).errors }
+    assert_equal Array.new(16) { |i| "scene.images[#{i}]: can't read the JPEG header" }, errors
+    assert_operator ms, :<, 2000
+  end
+
+  test 'work bounds: image headers are read in place, at an offset into the file' do
+    bytes = ('junk'.b * 3) + G.png(7, 9) + G.jpeg_header(30, 20)
+    header = Beeper::Gltf::ImageHeader
+    assert_equal 'image/png', header.sniff(bytes, 12, G.png(7, 9).bytesize)
+    assert_equal({ width: 7, height: 9 }, header.size(bytes, 'image/png', 12, G.png(7, 9).bytesize))
+    jpeg_at = 12 + G.png(7, 9).bytesize
+    assert_equal({ width: 30, height: 20 }, header.size(bytes, 'image/jpeg', jpeg_at, G.jpeg_header(30, 20).bytesize))
+    assert_nil header.size(bytes, 'image/jpeg', jpeg_at, 3) # cut short
+  end
+
+  test 'work bounds: 700k empty bufferViews: one early error, the list stays bounded' do
+    glb = G.build(simple(edit_json: ->(j) { j['bufferViews'] = Array.new(700_000) { {} } }))
+    errors = nil
+    ms = elapsed_ms { errors = inspect_glb(glb, limits(BIG_JSON)).errors }
+    assert_operator ms, :<, 6000
+    assert_equal 'scene.bufferViews: 700000 bufferViews; the limit is 65536', errors[0]
+    assert_equal 1, errors.count { |e| path_matches?(e, 'scene.bufferViews') }
+    assert_operator errors.size, :<=, MAX_ERRORS + 1
+  end
+
+  test 'work bounds: the error list keeps MAX_ERRORS entries, then one summary line' do
+    bad = ->(k) { G.build(simple(edit_json: ->(j) { j['bufferViews'] += Array.new(k) { {} } })) }
+    at = inspect_glb(bad.call(100))
+    assert_equal 100, at.errors.size
+    assert(at.errors.all? { |e| e.end_with?(' no such buffer') })
+    refute at.capped
+    one = inspect_glb(bad.call(101))
+    assert_equal 101, one.errors.size
+    assert_equal 'scene: …and 1 more problem', one.errors[100]
+    assert one.capped
+    many = inspect_glb(bad.call(300)).errors
+    assert_equal 101, many.size
+    assert_equal 'scene: …and 200 more problems', many[100]
+  end
+
+  test 'work bounds: arrays with a limit are skipped past 4× it; the count error is the same either way' do
+    nodes = ->(k) { G.build(simple(edit_json: ->(j) { j['nodes'] = Array.new(k) { { 'name' => 'N' } } })) }
+    at = inspect_glb(nodes.call(4 * 512))
+    assert_equal ['scene.nodes: 2048 nodes; the limit is 512'], at.errors
+    assert_equal 2048, at.summary['nodes'].size
+    refute at.capped
+    over = inspect_glb(nodes.call((4 * 512) + 1))
+    assert_equal ['scene.nodes: 2049 nodes; the limit is 512'], over.errors
+    assert_equal [], over.summary['nodes']
+    assert_equal 0, over.stats['nodes']
+    assert over.capped
+    lights = inspect_glb(G.build(simple(edit_json: ->(j) { j['extensions'] = { 'KHR_lights_punctual' => { 'lights' => Array.new(17) { { 'type' => 'point' } } } } })))
+    assert_equal ['scene.extensions.KHR_lights_punctual.lights: 17 lights; the limit is 4'], lights.errors
+  end
+
+  test 'work bounds: every limited array is skipped past 4× its limit, references into it then miss' do
+    {
+      'meshes' => 128, 'materials' => 32, 'images' => 16, 'animations' => 32, 'skins' => 4, 'cameras' => 4
+    }.each do |key, limit|
+      result = inspect_glb(G.build(simple(edit_json: ->(j) { j[key] = Array.new((4 * limit) + 1) { {} } })))
+      assert_equal "scene.#{key}: #{(4 * limit) + 1} #{key}; the limit is #{limit}", result.errors[0], key
+      assert_equal 1, result.errors.count { |e| path_matches?(e, "scene.#{key}") }, key
+    end
+    # The node's mesh 0 now resolves as missing.
+    meshes = inspect_glb(G.build(simple(edit_json: ->(j) { j['meshes'] = Array.new(513) { j['meshes'][0] } })))
+    assert_includes meshes.errors, 'scene.nodes[0].mesh: no such mesh'
+    assert_equal [], meshes.summary['meshes']
+  end
+
+  test 'work bounds: arrays without a limit are capped at 65536' do
+    %w[accessors samplers textures scenes buffers extensionsUsed].each do |key|
+      errors = inspect_glb(G.build(simple(edit_json: ->(j) { j[key] = Array.new(65_537, 0) }))).errors
+      assert_equal "scene.#{key}: 65537 #{key}; the limit is 65536", errors[0], key
+      assert_equal 1, errors.count { |e| path_matches?(e, "scene.#{key}") }, key
+    end
+    assert_equal [], inspect_glb(G.build(simple(edit_json: ->(j) { j['textures'] = Array.new(65_536) { {} } }))).errors
+    # Top-level samplers, textures and scenes that aren't arrays: no error, as before.
+    assert_equal [], inspect_glb(G.build(simple(edit_json: ->(j) { j['samplers'] = 'x' }))).errors
+  end
+
+  test 'work bounds: extensionsRequired is checked in linear time' do
+    names = Array.new(60_000) { |i| "X_#{i}" }
+    glb = G.build(simple(edit_json: ->(j) { j['extensionsUsed'] = names; j['extensionsRequired'] = names + ['Y'] }))
+    errors = nil
+    ms = elapsed_ms { errors = inspect_glb(glb).errors }
+    assert_operator ms, :<, 4000
+    assert_equal 'scene: …and 59901 more problems', errors.last # 60000 unsupported + 1 not listed, 100 kept
+  end
+
+  test 'work bounds: a non-string extensionsRequired entry is never listed' do
+    errors = inspect_glb(G.build(simple(edit_json: ->(j) { j['extensionsUsed'] = ['KHR_texture_transform']; j['extensionsRequired'] = [7, nil, ['KHR_texture_transform']] }))).errors
+    assert_equal ['scene.extensionsRequired: 7 is not listed in extensionsUsed',
+                  'scene.extensionsRequired: null is not listed in extensionsUsed',
+                  'scene.extensionsRequired: KHR_texture_transform is not listed in extensionsUsed'], errors
+  end
+
+  test 'work bounds: per-mesh primitives past 4 × maxDrawCalls, morph names past 4 × maxMorphTargets, samplers past 65536' do
+    prims = ->(k) { G.build(simple(edit_json: ->(j) { j['meshes'][0]['primitives'] = Array.new(k, j['meshes'][0]['primitives'][0]) })) }
+    lim = limits(maxDrawCalls: 2)
+    assert_equal ['scene.meshes[0].primitives: 9 primitives; the limit is 2'], inspect_glb(prims.call(9), lim).errors
+    assert_equal ['scene: 8 draw calls; the limit is 2'], inspect_glb(prims.call(8), lim).errors
+
+    targets = ->(k) { G.build(simple(edit_json: ->(j) { j['meshes'][0]['primitives'][0]['targets'] = Array.new(k) { {} } })) }
+    one = limits(maxMorphTargets: 1)
+    four = inspect_glb(targets.call(4), one)
+    assert_equal ['scene.meshes[0]: 4 morph targets; the limit is 1'], four.errors
+    assert_equal ['', '', '', ''], four.summary['meshes'][0]['morphs']
+    five = inspect_glb(targets.call(5), one)
+    assert_equal ['scene.meshes[0]: 5 morph targets; the limit is 1'], five.errors
+    assert_equal [], five.summary['meshes'][0]['morphs']
+    assert_equal 5, five.stats['morphTargets']
+
+    samplers = inspect_glb(G.build(simple(edit_json: ->(j) { j['animations'] = [{ 'channels' => [], 'samplers' => Array.new(65_537) { {} } }] })))
+    assert_equal ['scene.animations[0].samplers: 65537 samplers; the limit is 65536'], samplers.errors
+  end
+
+  test 'work bounds: JSON nested deeper than 100 is refused, as Ruby JSON does' do
+    deep = ->(depth) { G.build(simple(edit_json: ->(j) { j['extras'] = G.nest(depth - 1) })) } # the root object is depth 1
+    assert_equal [], inspect_glb(deep.call(100)).errors
+    refused = inspect_glb(deep.call(101))
+    assert_equal ['scene: JSON nested too deeply'], refused.errors
+    assert_nil refused.summary
+    assert_nil refused.stats
+    # Brackets inside strings don't count, escaped quotes don't end a string.
+    assert_equal [], inspect_glb(G.build(simple(edit_json: ->(j) { j['extras'] = { 's' => ('"\\' * 3) + ('[' * 500) } }))).errors
+    too_deep = Beeper::Gltf::Inspector.method(:json_too_deep?)
+    refute too_deep.call(('[' * 100) + (']' * 100))
+    assert too_deep.call('[' * 101) # decided before parsing: invalid JSON too
+    refute too_deep.call('{"a":"[[[[\\"[[["}')
+    assert too_deep.call('[{}]', 1)
+    refute too_deep.call('["\\') # a backslash ending the text
+    assert_equal ['scene: JSON nested too deeply'], inspect_glb(json_only_glb(('[' * 101).ljust(104))).errors
   end
 end

@@ -285,12 +285,10 @@ class Beeper::VisualizerGltfTest < ActiveSupport::TestCase
     assert_equal ['materials: outlines raise the draw calls to 130; the limit is 128'], errors
   end
 
-  test 'files: inspections are memoised per blob checksum (an LRU of 4)' do
+  test 'files: inspections are memoised per blob (an LRU of 4)' do
     asset = gltf_asset(dancer_files)
     assert_equal 1, downloads { V.call(dancer, asset) }
     assert_equal 0, downloads { 3.times { V.call(dancer, asset) } }
-    # Another blob with the same bytes shares the entry.
-    assert_equal 0, downloads { V.call(dancer, gltf_asset(dancer_files)) }
 
     scenes = Array.new(4) { |i| G.build(G.fixture_scene.merge(materials: G.fixture_scene[:materials] + [{ name: "Extra#{i}" }])) }
     assert_equal 4, downloads { scenes.each { |bytes| V.call(dancer, gltf_asset(dancer_files('dancer.glb' => [bytes, 'model/gltf-binary']))) } }
@@ -298,11 +296,51 @@ class Beeper::VisualizerGltfTest < ActiveSupport::TestCase
     assert_equal 1, downloads { V.call(dancer, asset) } # the first scene was evicted
   end
 
+  test 'files: the memo is keyed by the blob, not its checksum (a colliding MD5 cannot reuse a clean result)' do
+    clean = gltf_asset(dancer_files)
+    assert_equal [], V.call(dancer, clean)
+    clean_scene = clean.files.attachments.map(&:blob).find { |b| b.filename.to_s == 'dancer.glb' }
+
+    broken = G.build(G.fixture_scene.merge(extensions_used: ['KHR_draco_mesh_compression']))
+    other = gltf_asset(dancer_files('dancer.glb' => [broken, 'model/gltf-binary']))
+    other_scene = other.files.attachments.map(&:blob).find { |b| b.filename.to_s == 'dancer.glb' }
+    other_scene.checksum = clean_scene.checksum # as if the MD5s collided
+    errors = nil
+    assert_equal 1, downloads { errors = V.call(dancer, other) }
+    assert(errors.any? { |e| e.include?('KHR_draco_mesh_compression') }, errors.inspect)
+  end
+
+  test 'files: inspections that hit a work cap are not memoised' do
+    crafted = G.build(G.fixture_scene.merge(edit_json: ->(j) { j['bufferViews'] += Array.new(150) { {} } }))
+    asset = gltf_asset(dancer_files('dancer.glb' => [crafted, 'model/gltf-binary']))
+    errors = nil
+    assert_equal 1, downloads { errors = V.call(dancer, asset) }
+    assert_equal 'scene: …and 50 more problems', errors.last
+    assert_equal 0, Beeper::Gltf::InspectionCache.size
+    assert_equal 1, downloads { V.call(dancer, asset) }
+  end
+
   test 'files: a scene that cannot be downloaded is an error, not an exception' do
     asset = gltf_asset(dancer_files)
     scene = asset.files.attachments.map(&:blob).find { |b| b.filename.to_s == 'dancer.glb' }
     scene.service.delete(scene.key)
     assert_equal ['scene: "dancer.glb" could not be read'], V.call(dancer, asset)
+  end
+
+  # --- BindingsSummary on malformed drafts --------------------------------------------------------
+
+  test 'the bindings summary never raises on a malformed draft (idle as a string or an array, odd shapes)' do
+    summary = Beeper::Gltf::BindingsSummary
+    ['Fan', ['Fan'], 7, nil].each do |idle|
+      sections = summary.call(dancer.deep_merge('audio' => { 'idle' => idle }))
+      refute_includes sections.map(&:first), 'Idle', idle.inspect
+      assert_includes sections.map(&:first), 'Bindings'
+    end
+    assert_equal [['Idle', ['(unreadable)']]], summary.call('audio' => { 'idle' => { 'clips' => ['Fan'] } }).reject { |t, _| t == 'View' }
+    odd = { 'audio' => 'x', 'materials' => 'x', 'view' => [] }
+    assert_equal ['View'], summary.call(odd).map(&:first)
+    assert_equal ['View'], summary.call('audio' => { 'bindings' => 'x', 'noteClips' => [], 'idle' => [] }).map(&:first)
+    assert_equal ['Bindings', ['(unreadable)']], summary.call('audio' => { 'bindings' => [7] }).first
   end
 
   # --- dispatch (Beeper::Manifests::Visualizer) ---------------------------------------------------

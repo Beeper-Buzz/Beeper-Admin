@@ -1,10 +1,11 @@
 module Beeper
   module Gltf
-    # Inspections of uploaded GLBs, memoised per blob checksum in-process (spec §6.4), so the
-    # repeated PATCHes of a draft and the review page don't download a scene of up to 20 MB again.
-    # A small LRU: SIZE entries, the least recently used dropped first. Keyed by the blob's MD5 and
-    # size (same bytes, same inspection, whichever blob row holds them); a blob without a checksum
-    # is not cached.
+    # Inspections of uploaded GLBs, memoised per blob in-process (spec §6.4), so the repeated
+    # PATCHes of a draft and the review page don't download a scene of up to 20 MB again. A small
+    # LRU: SIZE entries, the least recently used dropped first. Keyed by the blob's storage key,
+    # which is unique per blob and whose bytes never change; a blob without a key is not cached.
+    # Results that hit a work cap (result.capped) are not stored, so a crafted file can't pin a
+    # large error list in memory.
     module InspectionCache
       SIZE = 4
 
@@ -12,7 +13,7 @@ module Beeper
       @lock = Mutex.new
 
       class << self
-        # The cached inspection of blob, or the block's result (stored unless it raises).
+        # The cached inspection of blob, or the block's result (stored unless it raises or capped).
         def fetch(blob)
           key = key_for(blob)
           return yield unless key
@@ -25,6 +26,8 @@ module Beeper
           return hit if hit
 
           value = yield
+          return value if value.respond_to?(:capped) && value.capped
+
           @lock.synchronize do
             @entries.delete(key)
             @entries[key] = value
@@ -34,8 +37,8 @@ module Beeper
         end
 
         def key_for(blob)
-          checksum = blob.respond_to?(:checksum) ? blob.checksum : nil
-          checksum.present? ? "#{checksum}:#{blob.byte_size}" : nil
+          key = blob.respond_to?(:key) ? blob.key : nil
+          key.present? ? key.to_s : nil
         end
 
         def size

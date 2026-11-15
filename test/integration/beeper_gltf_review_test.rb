@@ -92,6 +92,8 @@ class BeeperGltfReviewTest < ActionDispatch::IntegrationTest
     assert_includes body, 'id="approve_creator_product"'
   end
 
+  # The proxy route is a public signed URL, not admin-only: the same exposure as the existing
+  # rails_blob_path links to a draft's files on this page. It only keeps model-viewer same-origin.
   test 'the proxy URL serves the GLB from this origin' do
     product = gltf_product
     login_as(@admin, scope: :spree_user)
@@ -155,6 +157,20 @@ class BeeperGltfReviewTest < ActionDispatch::IntegrationTest
     get "/admin/products/#{shader.slug}/digital_assets/#{shader_asset.id}/edit"
     assert_response :success
     refute_includes response.body, 'beeper_gltf_preview'
+  end
+
+  test 'a draft whose idle is a string or an array still renders the review and asset pages' do
+    login_as(@admin, scope: :spree_user)
+    ['Fan', ['Fan']].each do |idle|
+      product = gltf_product(dancer.deep_merge('audio' => { 'idle' => idle }))
+      asset = Spree::DigitalAsset.draft.find_by!(variant_id: product.master.id)
+      get "/admin/creator_reviews/#{product.id}"
+      assert_response :success
+      assert_includes response.body, 'id="beeper_gltf_preview"'
+      get "/admin/products/#{product.slug}/digital_assets/#{asset.id}/edit"
+      assert_response :success
+      assert_includes response.body, 'id="beeper_gltf_preview"'
+    end
   end
 
   test 'the manifest guide has a glTF section with the dancer example, which validates' do

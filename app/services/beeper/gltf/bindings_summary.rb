@@ -19,19 +19,21 @@ module Beeper
       def call(manifest)
         manifest = manifest.is_a?(Hash) ? manifest.deep_stringify_keys : {}
         audio = manifest['audio'].is_a?(Hash) ? manifest['audio'] : {}
+        idle = audio['idle'].is_a?(Hash) ? audio['idle'] : {}
         [
           ['Bindings', list(audio['bindings']) { |b| binding_line(b) }],
           ['Note → clip', note_clip_lines(audio['noteClips'])],
-          ['Idle', list(audio.dig('idle', 'clips')) { |c| idle_line(c) }],
+          ['Idle', list(idle['clips']) { |c| idle_line(c) }],
           ['Materials (toon)', list(manifest['materials']) { |m| material_line(m) }],
           ['View', view_lines(manifest['view'])]
         ].reject { |_, lines| lines.empty? }
       end
 
+      # One line per item; an item that isn't an object is "(unreadable)".
       def list(items, &block)
         return [] unless items.is_a?(Array)
 
-        items.map { |item| safely { block.call(item) } }
+        items.map { |item| item.is_a?(Hash) ? safely { block.call(item) } : '(unreadable)' }
       end
 
       def safely

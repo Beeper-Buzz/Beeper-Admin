@@ -12,7 +12,7 @@ module Beeper
     #   2. with an asset, its files: the scene attached and a .glb of at most 20 MB (refused by
     #      byte_size before any download), the poster (optional) attached, a PNG, JPEG or WebP of
     #      at most 2 MB, no other file;
-    #   3. the scene downloaded and inspected (Beeper::Gltf::Inspector, memoised per blob checksum
+    #   3. the scene downloaded and inspected (Beeper::Gltf::Inspector, memoised per blob
     #      by Beeper::Gltf::InspectionCache), its errors added, and the manifest's names resolved
     #      against its summary, with outlines counted toward the draw calls.
     # Without an asset, steps 2 and 3 are skipped (as for the other kinds).
@@ -95,7 +95,7 @@ module Beeper
         c.errors
       end
 
-      # The scene's inspection (memoised per blob checksum), or nil when it can't be read.
+      # The scene's inspection (memoised per blob), or nil when it can't be read.
       def inspection(blob)
         Beeper::Gltf::InspectionCache.fetch(blob) do
           Beeper::Gltf::Inspector.call(blob.download)
