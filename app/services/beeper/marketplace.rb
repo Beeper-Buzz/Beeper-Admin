@@ -21,12 +21,16 @@ module Beeper
 
     # Splits the generic json/glsl text rule: manifests stay at 256 KB, shaders get the visualizer
     # limit (64 KB, Beeper::Manifests::Visualizer), so an oversized shader is refused at upload.
+    # Adds the glTF visualizer's scene: a .glb of at most 20 MB (visualizer-gltf.limits.json); its
+    # poster is an image under the generic image rule (the manifest validator caps it at 2 MB).
     def apply_uploads(config)
       text = config.rules.delete(:text) || { content_types: [], extensions: [] }
       config.rules[:json] = { content_types: %w[application/json text/json text/plain], extensions: %w[json],
                               max_bytes: 256.kilobytes }
       config.rules[:shader] = { content_types: (text[:content_types] - %w[application/json text/json]) | %w[text/plain text/x-glsl application/octet-stream],
                                 extensions: %w[glsl], max_bytes: Beeper::Manifests::Visualizer::MAX_SHADER_BYTES }
+      config.rules[:scene] = { content_types: %w[model/gltf-binary application/octet-stream], extensions: %w[glb],
+                               max_bytes: Beeper::Gltf::LIMITS['glbMaxBytes'] }
       config
     end
 

@@ -15,6 +15,9 @@ module Beeper
     # lib/manifests/visualizer.ts) so creator portal and server never disagree: same comment
     # stripping, same patterns, same messages. Word boundaries are spelled as ASCII lookarounds
     # to match JavaScript's \b. Change both together.
+    #
+    # The manifest's "type" picks the scene format: absent or "shader" is the shader manifest
+    # above; "gltf" is a 3D scene (Beeper::Manifests::VisualizerGltf); anything else is refused.
     module Visualizer
       MAX_SHADER_BYTES = 64 * 1024
       MAX_PARAMS = 8
@@ -43,9 +46,16 @@ module Beeper
       module_function
 
       def call(manifest, asset = nil)
-        manifest = Manifests.normalize(manifest)
-        return ['must be a JSON object'] unless manifest
+        normalized = Manifests.normalize(manifest)
+        return ['must be a JSON object'] unless normalized
+        return shader_call(normalized, asset) if !normalized.key?('type') || normalized['type'] == 'shader'
+        return Beeper::Manifests::VisualizerGltf.call(manifest, asset) if normalized['type'] == 'gltf'
 
+        ['type: must be shader or gltf']
+      end
+
+      # A shader manifest (no type, or type "shader"), already normalized.
+      def shader_call(manifest, asset)
         errors = []
         errors << 'format must be 1' unless manifest['format'] == 1
         errors.concat(shader_errors(manifest['shader'], Manifests.attached(asset)))

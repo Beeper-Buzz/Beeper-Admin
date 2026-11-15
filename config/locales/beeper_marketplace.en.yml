@@ -8,7 +8,7 @@ en:
       kinds:
         sample_pack: Sample pack for the Beeper Sampler
         effect_preset: Effect preset for the Beeper effects rack
-        visualizer: Visualizer scene (a fragment shader)
+        visualizer: Visualizer scene (a fragment shader or a glTF 3D scene)
       manifest_guide:
         title: Beeper manifests
         intro: >-
@@ -29,6 +29,15 @@ en:
           varying, #version, #extension or #include (the app declares them). Up to 8 params, each read
           in the shader as uP_<name> (name: a lowercase letter, then up to 23 letters or digits), with
           min, max, default and an optional drive (bass, mid, high, level or beat).
+        visualizer_gltf_title: 'A 3D scene: "type": "gltf"'
+        visualizer_gltf: >-
+          "scene" names one attached .glb (glTF Binary, at most %{max_mb} MB, PNG/JPEG textures, no
+          Draco, meshopt or KTX2); "poster" an optional attached png, jpg or webp of at most 2 MB; no
+          other files. "audio" (schemaVersion 1) binds musical sources (bass, kick, notePulse...) to
+          clips, morphs, nodes, materials, lights and the camera, by their names in the GLB; "idle"
+          loops clips in silence; "noteClips" switches clips on notes; "materials" makes materials
+          toon-shaded; "view" sets the camera, lighting and background. Unknown keys are refused.
+          The creator studio builds this; an example:
       order_email:
         digital_html: >-
           Your downloads are in the Library of the Beeper app: sign in with this account and open

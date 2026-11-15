@@ -22,7 +22,12 @@
       <dt><code>visualizer</code> &mdash; <%= t('beeper.marketplace.kinds.visualizer') %></dt>
       <dd class="mb-0">
         <%= t('beeper.marketplace.manifest_guide.visualizer') %>
-        <pre class="mt-2 mb-0"><code><%= JSON.pretty_generate('format' => 1, 'shader' => 'rings.glsl', 'params' => [{ 'name' => 'glow', 'label' => 'Glow', 'min' => 0, 'max' => 1, 'default' => 0.5, 'drive' => 'bass' }]) %></code></pre>
+        <pre class="mt-2 mb-3"><code><%= JSON.pretty_generate('format' => 1, 'shader' => 'rings.glsl', 'params' => [{ 'name' => 'glow', 'label' => 'Glow', 'min' => 0, 'max' => 1, 'default' => 0.5, 'drive' => 'bass' }]) %></code></pre>
+        <div data-hook="beeper_manifest_guide_gltf">
+          <strong><%= t('beeper.marketplace.manifest_guide.visualizer_gltf_title') %></strong>
+          <p class="mb-1"><%= t('beeper.marketplace.manifest_guide.visualizer_gltf', max_mb: Beeper::Gltf::LIMITS['glbMaxBytes'] / 1.megabyte) %></p>
+          <pre class="mt-2 mb-0" style="max-height: 360px; overflow: auto;"><code><%= JSON.pretty_generate(Beeper::Gltf::EXAMPLE_MANIFEST) %></code></pre>
+        </div>
       </dd>
     </dl>
   </div>

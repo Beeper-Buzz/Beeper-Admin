@@ -1,0 +1,156 @@
+{
+  "about": "Shared conformance cases for the glTF visualizer manifest (format 1, audio schemaVersion 1). Every validator (app, web, server) runs every case against `summary` (what the GLB inspector reports for the scene) and must agree: valid cases give no errors; each invalid case gives at least one error whose path (the text before the first ': ') equals `errorPath` or starts with it followed by '.' or '['. `schemaOnly: true` marks cases the JSON Schema alone also rejects (ajv agrees in the TS tests).",
+  "summary": {
+    "nodes": ["Root", "Dancer", "Hips", "Speaker", "Cone", "KeyLight", "Cam", "Dup", "Dup"],
+    "meshes": [
+      { "name": "Body", "morphs": ["Smile", "Blink"] },
+      { "name": "SpeakerMesh", "morphs": [] }
+    ],
+    "materials": ["Skin", "Outfit", "Neon", "Dup", "Dup"],
+    "animations": [
+      { "name": "Idle", "duration": 2 },
+      { "name": "Dance1", "duration": 1.92 },
+      { "name": "Dance2", "duration": 3.84 },
+      { "name": "Wave", "duration": 1.5 },
+      { "name": "Pump", "duration": 0.5 },
+      { "name": "Fan", "duration": 4 }
+    ],
+    "lights": ["KeyLight"],
+    "cameras": ["Cam"]
+  },
+  "valid": [
+    {
+      "name": "minimal",
+      "manifest": { "format": 1, "type": "gltf", "scene": "scene.glb", "audio": { "schemaVersion": 1 } }
+    },
+    {
+      "name": "server checksums key is ignored",
+      "manifest": { "format": 1, "type": "gltf", "scene": "scene.glb", "audio": { "schemaVersion": 1 }, "files": { "scene.glb": { "sha256": "abc" } } }
+    },
+    {
+      "name": "dancer example",
+      "manifest": {
+        "format": 1,
+        "type": "gltf",
+        "scene": "dancer.glb",
+        "poster": "poster.jpg",
+        "view": {
+          "background": "#07040F",
+          "lighting": "studio",
+          "exposure": 1.1,
+          "camera": { "fov": 35, "distance": 1.2, "elevation": 8, "azimuth": 20, "orbitSpeed": 4 }
+        },
+        "materials": [
+          { "material": "Skin", "toon": { "steps": 3, "outline": { "width": 0.006, "color": "#120A1E" } } },
+          { "material": "*", "toon": { "steps": 2 } }
+        ],
+        "audio": {
+          "schemaVersion": 1,
+          "idle": { "clips": [{ "clip": "Fan", "timeScale": 0.5 }] },
+          "noteClips": {
+            "initial": "Idle",
+            "fadeMs": 250,
+            "priority": "velocity",
+            "onStop": "initial",
+            "returnAfterMs": 8000,
+            "rules": [
+              { "match": { "part": "keys", "notes": [48, 59] }, "clip": "Dance1", "mode": "loop", "sync": "beat", "clipBpm": 120 },
+              { "match": { "part": "keys", "notes": [60, 71] }, "clip": "Dance2", "mode": "loop", "sync": "bar", "clipBpm": 120, "velocity": { "to": "timeScale", "range": [0.8, 1.2] } },
+              { "match": { "part": "sampler", "slot": 15 }, "clip": "Wave", "mode": "once", "fadeMs": 120 },
+              { "match": { "part": "drums", "voices": ["clap", "rim"] }, "clip": "Pump", "mode": "once", "sync": "now", "velocity": { "to": "weight", "range": [0.5, 1] } }
+            ]
+          },
+          "bindings": [
+            { "id": "kick-thump", "source": "kick", "outputRange": [1, 1.25], "curve": "easeOut", "smoothing": { "attackMs": 0, "releaseMs": 140 }, "target": { "kind": "node", "node": "Cone", "property": "scale", "axis": "xyz" } },
+            { "id": "bass-glow", "sources": [{ "source": "bass", "weight": 0.7 }, { "source": "hit", "weight": 0.5 }], "combine": "max", "outputRange": [0.5, 6], "curve": "exp", "smoothing": { "attackMs": 10, "releaseMs": 300 }, "target": { "kind": "material", "property": "emissiveIntensity", "material": "Neon" } },
+            { "id": "hue-by-note", "source": "note", "inputRange": [36, 84], "outputRange": [0, 300], "smoothing": { "attackMs": 60, "releaseMs": 60 }, "target": { "kind": "material", "material": "Outfit", "property": "hueShift" } },
+            { "id": "smile", "source": "notePulse", "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } },
+            { "id": "blink", "source": "hats", "curve": "step", "steps": 2, "target": { "kind": "morph", "mesh": "Body", "morph": 1 } },
+            { "id": "light", "source": "level", "outputRange": [0.6, 2.5], "target": { "kind": "light", "light": "KeyLight", "property": "intensity" } },
+            { "id": "orbit", "source": "playing", "outputRange": [0, 12], "smoothing": { "attackMs": 800, "releaseMs": 1500 }, "target": { "kind": "camera", "property": "orbitSpeed" } },
+            { "id": "dolly", "source": "onset", "outputRange": [1, 0.92], "smoothing": { "attackMs": 0, "releaseMs": 250 }, "target": { "kind": "camera", "property": "dolly" } },
+            { "id": "hip-sway", "source": "barPhase", "curve": "easeInOut", "outputRange": [-6, 6], "target": { "kind": "node", "node": "Hips", "property": "rotation", "axis": "z" } }
+          ]
+        }
+      }
+    },
+    {
+      "name": "speaker example (clip targets)",
+      "manifest": {
+        "format": 1,
+        "type": "gltf",
+        "scene": "speaker.GLB",
+        "view": { "lighting": "scene", "camera": { "node": "Cam", "orbitSpeed": 0 } },
+        "audio": {
+          "schemaVersion": 1,
+          "idle": { "clips": [{ "clip": "Idle" }] },
+          "bindings": [
+            { "source": "bpm", "inputRange": [60, 180], "outputRange": [0.5, 1.5], "target": { "kind": "clip", "clip": "Fan", "mode": "speed" } },
+            { "source": "level", "target": { "kind": "clip", "clip": "Fan", "mode": "weight" } },
+            { "source": "beatPhase", "target": { "kind": "clip", "clip": "Dance1", "mode": "scrub" } },
+            { "source": "drums", "target": { "kind": "clip", "clip": "Pump", "mode": "trigger", "threshold": 0.6 } },
+            { "source": "synth", "target": { "kind": "clip", "clip": "Wave", "mode": "play", "threshold": 0.3, "fadeMs": 400 } },
+            { "source": "mid", "invert": true, "target": { "kind": "material", "material": "Neon", "property": "color", "colors": ["#FF2266", "#22CCFF"] } },
+            { "source": "kick", "outputRange": [0, 0.2], "target": { "kind": "node", "node": "Cone", "property": "position" } },
+            { "source": "snare", "outputRange": [0, 0.1], "target": { "kind": "node", "node": "Cone", "property": "position" } },
+            { "source": "high", "outputRange": [0, 360], "target": { "kind": "node", "node": "Speaker", "property": "spin", "axis": "y" } }
+          ]
+        }
+      }
+    }
+  ],
+  "invalid": [
+    { "name": "unknown top-level key", "schemaOnly": true, "errorPath": "extra", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1 }, "extra": 1 } },
+    { "name": "wrong format", "schemaOnly": true, "errorPath": "format", "manifest": { "format": 2, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1 } } },
+    { "name": "scene not a glb", "schemaOnly": true, "errorPath": "scene", "manifest": { "format": 1, "type": "gltf", "scene": "s.gltf", "audio": { "schemaVersion": 1 } } },
+    { "name": "scene with a directory", "schemaOnly": true, "errorPath": "scene", "manifest": { "format": 1, "type": "gltf", "scene": "../s.glb", "audio": { "schemaVersion": 1 } } },
+    { "name": "missing audio", "schemaOnly": true, "errorPath": "audio", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb" } },
+    { "name": "audio schemaVersion 2", "schemaOnly": true, "errorPath": "audio.schemaVersion", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 2 } } },
+    { "name": "unknown key in audio", "schemaOnly": true, "errorPath": "audio.script", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "script": "return 1" } } },
+    { "name": "expression string where a number goes", "schemaOnly": true, "errorPath": "audio.bindings[0].outputRange[1]", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "outputRange": [0, "bass*2"], "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "unknown source", "schemaOnly": true, "errorPath": "audio.bindings[0].source", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "treble", "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "source and sources together", "schemaOnly": true, "errorPath": "audio.bindings[0]", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "sources": [{ "source": "mid" }], "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "combine without sources", "schemaOnly": true, "errorPath": "audio.bindings[0]", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "combine": "max", "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "five sources", "schemaOnly": true, "errorPath": "audio.bindings[0].sources", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "sources": [{ "source": "bass" }, { "source": "mid" }, { "source": "high" }, { "source": "level" }, { "source": "kick" }], "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "unknown target kind", "schemaOnly": true, "errorPath": "audio.bindings[0].target", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "shader", "uniform": "uX" } }] } } },
+    { "name": "unknown key in a target", "schemaOnly": true, "errorPath": "audio.bindings[0].target", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "camera", "property": "dolly", "onUpdate": "x" } }] } } },
+    { "name": "toon steps 9", "schemaOnly": true, "errorPath": "materials[0].toon.steps", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "materials": [{ "material": "Skin", "toon": { "steps": 9 } }], "audio": { "schemaVersion": 1 } } },
+    { "name": "outline too wide", "schemaOnly": true, "errorPath": "materials[0].toon.outline.width", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "materials": [{ "material": "Skin", "toon": { "steps": 3, "outline": { "width": 0.2 } } }], "audio": { "schemaVersion": 1 } } },
+    { "name": "note match with both note and notes", "schemaOnly": true, "errorPath": "audio.noteClips.rules[0].match", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "note": 60, "notes": [60, 61] }, "clip": "Dance1" }] } } } },
+    { "name": "drum match with a MIDI note", "schemaOnly": true, "errorPath": "audio.noteClips.rules[0].match", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "drums", "note": 36 }, "clip": "Dance1" }] } } } },
+    { "name": "sampler slot 16", "schemaOnly": true, "errorPath": "audio.noteClips.rules[0].match", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "sampler", "slot": 16 }, "clip": "Dance1" }] } } } },
+    { "name": "unknown drum voice", "schemaOnly": true, "errorPath": "audio.noteClips.rules[0].match", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "drums", "voice": "cowbell" }, "clip": "Dance1" }] } } } },
+    { "name": "noteClips without rules", "schemaOnly": true, "errorPath": "audio.noteClips.rules", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle" } } } },
+    { "name": "bad background colour", "schemaOnly": true, "errorPath": "view.background", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "view": { "background": "red" }, "audio": { "schemaVersion": 1 } } },
+
+    { "name": "inputRange collapsed", "errorPath": "audio.bindings[0].inputRange", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "inputRange": [0.5, 0.5], "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "outputRange outside the property's bounds", "errorPath": "audio.bindings[0].outputRange", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "outputRange": [0, 2], "target": { "kind": "material", "material": "Neon", "property": "opacity" } }] } } },
+    { "name": "steps without a step curve", "errorPath": "audio.bindings[0].steps", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "steps": 3, "target": { "kind": "morph", "mesh": "Body", "morph": "Smile" } }] } } },
+    { "name": "threshold on a speed target", "errorPath": "audio.bindings[0].target.threshold", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "clip", "clip": "Fan", "mode": "speed", "threshold": 0.5 } }] } } },
+    { "name": "outputRange on a trigger target", "errorPath": "audio.bindings[0].outputRange", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "kick", "outputRange": [0, 1], "target": { "kind": "clip", "clip": "Pump", "mode": "trigger" } }] } } },
+    { "name": "colours missing on a colour target", "errorPath": "audio.bindings[0].target.colors", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "material", "material": "Neon", "property": "emissiveColor" } }] } } },
+    { "name": "colours on a non-colour target", "errorPath": "audio.bindings[0].target.colors", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "material", "material": "Neon", "property": "roughness", "colors": ["#000000", "#FFFFFF"] } }] } } },
+    { "name": "same material property bound twice", "errorPath": "audio.bindings[1].target", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "material", "material": "Neon", "property": "emissiveIntensity" } }, { "source": "mid", "target": { "kind": "material", "material": "Neon", "property": "emissiveIntensity" } }] } } },
+    { "name": "velocity range outside bounds", "errorPath": "audio.noteClips.rules[0].velocity.range", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "note": 60 }, "clip": "Dance1", "velocity": { "to": "weight", "range": [0, 2] } }] } } } },
+    { "name": "note range reversed", "errorPath": "audio.noteClips.rules[0].match.notes", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "notes": [72, 60] }, "clip": "Dance1" }] } } } },
+    { "name": "camera node with framing keys", "errorPath": "view.camera.fov", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "view": { "camera": { "node": "Cam", "fov": 50 } }, "audio": { "schemaVersion": 1 } } },
+    { "name": "two catch-all material overrides", "errorPath": "materials[1].material", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "materials": [{ "material": "*", "toon": { "steps": 2 } }, { "material": "*", "toon": { "steps": 3 } }], "audio": { "schemaVersion": 1 } } },
+
+    { "name": "unknown clip in a binding", "errorPath": "audio.bindings[0].target.clip", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "clip", "clip": "Moonwalk", "mode": "speed" } }] } } },
+    { "name": "unknown idle clip", "errorPath": "audio.idle.clips[0].clip", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "idle": { "clips": [{ "clip": "Sleep" }] } } } },
+    { "name": "unknown noteClips initial", "errorPath": "audio.noteClips.initial", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Rest", "rules": [{ "match": { "part": "synth", "note": 60 }, "clip": "Dance1" }] } } } },
+    { "name": "unknown noteClips rule clip", "errorPath": "audio.noteClips.rules[0].clip", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "note": 60 }, "clip": "Floss" }] } } } },
+    { "name": "unknown node", "errorPath": "audio.bindings[0].target.node", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "node", "node": "Tail", "property": "scale" } }] } } },
+    { "name": "ambiguous node name", "errorPath": "audio.bindings[0].target.node", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "node", "node": "Dup", "property": "scale" } }] } } },
+    { "name": "unknown mesh", "errorPath": "audio.bindings[0].target.mesh", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "morph", "mesh": "Face", "morph": "Smile" } }] } } },
+    { "name": "unknown morph name", "errorPath": "audio.bindings[0].target.morph", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "morph", "mesh": "Body", "morph": "Frown" } }] } } },
+    { "name": "morph index out of range", "errorPath": "audio.bindings[0].target.morph", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "morph", "mesh": "Body", "morph": 2 } }] } } },
+    { "name": "unknown material", "errorPath": "audio.bindings[0].target.material", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "material", "material": "Chrome", "property": "roughness" } }] } } },
+    { "name": "ambiguous material in an override", "errorPath": "materials[0].material", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "materials": [{ "material": "Dup", "toon": { "steps": 2 } }], "audio": { "schemaVersion": 1 } } },
+    { "name": "light target on a node without a light", "errorPath": "audio.bindings[0].target.light", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "light", "light": "Speaker", "property": "intensity" } }] } } },
+    { "name": "camera node without a camera", "errorPath": "view.camera.node", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "view": { "camera": { "node": "Speaker" } }, "audio": { "schemaVersion": 1 } } },
+    { "name": "clip owned by idle and noteClips", "errorPath": "audio.noteClips.initial", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "idle": { "clips": [{ "clip": "Idle" }] }, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "note": 60 }, "clip": "Dance1" }] } } } },
+    { "name": "clip owned by noteClips and a binding", "errorPath": "audio.bindings[0].target.clip", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "noteClips": { "initial": "Idle", "rules": [{ "match": { "part": "synth", "note": 60 }, "clip": "Dance1" }] }, "bindings": [{ "source": "bass", "target": { "kind": "clip", "clip": "Dance1", "mode": "speed" } }] } } },
+    { "name": "scrub and speed on one clip", "errorPath": "audio.bindings[1].target.mode", "manifest": { "format": 1, "type": "gltf", "scene": "s.glb", "audio": { "schemaVersion": 1, "bindings": [{ "source": "bass", "target": { "kind": "clip", "clip": "Fan", "mode": "scrub" } }, { "source": "mid", "target": { "kind": "clip", "clip": "Fan", "mode": "speed" } }] } } }
+  ]
+}

@@ -1,0 +1,4 @@
+<!-- insert_after "#digital_asset_files" -->
+<% if @asset.persisted? && Beeper::Gltf.visualizer?(@asset) %>
+  <%= render partial: 'spree/admin/creator_reviews/beeper_gltf_preview', locals: { asset: @asset } %>
+<% end %>
