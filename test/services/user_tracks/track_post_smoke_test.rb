@@ -73,7 +73,15 @@ class UserTracks::TrackPostSmokeTest < ActiveSupport::TestCase
     assert_includes %w[major minor], result['scale']
     assert_operator result['peakDb'], :<=, -0.9
 
+    # The loop is cut on the measured beat; its tempo is reported for the engine's time-stretch.
+    assert_in_delta 120.0, result['loopBpm'], 1.2
+    assert_in_delta result['loopSamples'], 2 * 4 * 60.0 / result['loopBpm'] * 48_000, 2
+
     decision = UserTracks::Decide.call(track, result)
     assert_includes %i[ready regenerate], decision.action
+    if decision.action == :ready
+      assert_equal result['loopBpm'].round(3), decision.profile['bpm']
+      assert_equal 'measured', decision.profile['profileSource']['bpm']
+    end
   end
 end
