@@ -11,7 +11,12 @@ RUN apt-get update -qq && apt-get install -y \
     nodejs \
     npm \
     curl \
+    python3 \
+    python3-numpy \
+    python3-soundfile \
     && rm -rf /var/lib/apt/lists/*
+# python3, numpy and soundfile (Buster: Python 3.7.3, numpy 1.16.2, soundfile 0.10.1 on
+# libsndfile 1.0.28) run lib/user_tracks/track_post.py, which cuts AI backing tracks into loops.
 
 RUN apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs
 

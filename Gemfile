@@ -98,6 +98,8 @@ group :test do
   gem 'selenium-webdriver'
   # Easy installation and use of chromedriver to run system tests with Chrome
   gem 'chromedriver-helper', require: false
+  # Stub all outbound HTTP in tests (the track generator is never called for real)
+  gem 'webmock', '~> 3.18'
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem

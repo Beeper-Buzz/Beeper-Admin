@@ -1,0 +1,100 @@
+# Beeper's style vocabulary for AI backing tracks (UserTracks::Styles, from dna-admin). Each
+# caption is the opening of the generator prompt, written for a loopable instrumental bed: a
+# steady groove, an arrangement that doesn't build or break down, and room on top for the
+# player's lead. The prompt adds the mood words and the loop guidance ("no intro, no outro, no
+# fade, no vocals, ...") after it. No artist names.
+#
+# moods: chips a player may add (0-2 per track); `words` go into the prompt after the caption.
+# styles:
+#   id            stable chip id the app sends as `style` (never rename one in use)
+#   label         chip text, also the track title ("Retrowave in A minor")
+#   bpmRange      [low, high] within 40-240; with "Match my session" off the app asks for the middle
+#   defaultMoods  moods preselected for the style (and used when a request sends none)
+#   caption       genre, drums, bass, harmony, texture
+moods:
+  - id: warm
+    label: Warm
+    words: warm, mellow
+  - id: bright
+    label: Bright
+    words: bright, uplifting
+  - id: dark
+    label: Dark
+    words: dark, brooding
+  - id: dreamy
+    label: Dreamy
+    words: dreamy, hazy
+  - id: driving
+    label: Driving
+    words: driving, energetic
+  - id: chill
+    label: Chill
+    words: laid-back, relaxed
+  - id: gritty
+    label: Gritty
+    words: gritty, raw
+  - id: euphoric
+    label: Euphoric
+    words: euphoric, soaring
+
+styles:
+  - id: retrowave
+    label: Retrowave
+    bpmRange: [84, 112]
+    defaultMoods: [dreamy]
+    caption: retrowave, 80s drum machine with gated reverb snare, pulsing analog synth bass, lush polysynth pads, steady arpeggio
+  - id: deep-house
+    label: Deep House
+    bpmRange: [118, 125]
+    defaultMoods: [warm]
+    caption: deep house, four-on-the-floor kick, shuffled hi-hats, warm sub bass line, soft electric piano chord stabs
+  - id: lofi-hip-hop
+    label: Lo-fi Hip Hop
+    bpmRange: [70, 90]
+    defaultMoods: [chill]
+    caption: lo-fi hip hop beat, dusty swung drums, vinyl crackle, mellow jazzy electric piano chords, round upright bass
+  - id: drum-and-bass
+    label: Drum & Bass
+    bpmRange: [165, 178]
+    defaultMoods: [driving]
+    caption: drum and bass, fast breakbeat drums, rolling reese bass, atmospheric pads, crisp ride cymbal
+  - id: trap
+    label: Trap
+    bpmRange: [130, 150]
+    defaultMoods: [dark]
+    caption: trap beat, booming 808 bass, crisp snare, rapid hi-hat rolls, sparse dark synth melody loop
+  - id: techno
+    label: Techno
+    bpmRange: [124, 135]
+    defaultMoods: [driving]
+    caption: techno, pounding four-on-the-floor kick, hypnotic synth sequence, rumbling bass, metallic percussion
+  - id: synthpop
+    label: Synthpop
+    bpmRange: [100, 124]
+    defaultMoods: [bright]
+    caption: synthpop, punchy drum machine, bright analog synth chords, bouncing synth bass, shimmering arpeggio
+  - id: ambient
+    label: Ambient
+    bpmRange: [60, 90]
+    defaultMoods: [dreamy]
+    caption: ambient groove, soft steady pulse, evolving warm synth pads, gentle sub bass, light textural percussion
+  - id: funk
+    label: Funk
+    bpmRange: [96, 116]
+    defaultMoods: [warm]
+    caption: funk groove, tight live drums, slap bass, choppy clean electric guitar, brass stabs, clavinet
+  - id: boom-bap
+    label: Boom Bap
+    bpmRange: [84, 96]
+    defaultMoods: [gritty]
+    caption: boom bap hip hop beat, hard sampled kick and snare, swung hi-hats, jazzy sampled piano loop, deep bass line
+  - id: afrobeats
+    label: Afrobeats
+    bpmRange: [98, 112]
+    defaultMoods: [bright]
+    caption: afrobeats groove, syncopated log drums and shakers, bouncy bass, plucked guitar and marimba chords
+  - id: nu-disco
+    label: Nu Disco
+    bpmRange: [115, 124]
+    defaultMoods: [euphoric]
+    caption: nu disco, four-on-the-floor kick with open hi-hats, octave disco bass line, funky guitar, string stabs

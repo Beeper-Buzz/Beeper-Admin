@@ -1,6 +1,10 @@
 ENV['RAILS_ENV'] ||= 'test'
 require_relative '../config/environment'
 require 'rails/test_help'
+require 'webmock/minitest'
+
+# Tests never reach real third-party services (the track generator, ...).
+WebMock.disable_net_connect!(allow_localhost: true)
 
 # config/initializers/active_storage.rb points every environment at S3; tests use local disk.
 ActiveStorage::Blob.service = ActiveStorage::Blob.services.fetch(:test)
