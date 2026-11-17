@@ -1,0 +1,96 @@
+[
+  {
+    "section_type": "hero",
+    "title": "Make the sounds people play on Beeper",
+    "content": "<p>Sell sample packs, effect presets and visualizers on beeper.buzz. Buyers load them straight into the Beeper app: on the pads, in the effects rack and behind the music.</p>",
+    "settings": {
+      "button_text": "Apply to sell",
+      "button_link": "/account/creator",
+      "secondary_text": "See the marketplace",
+      "secondary_link": "/browse?mode=marketplace",
+      "hint": "Tap a pad to play it"
+    }
+  },
+  {
+    "section_type": "revenue_share",
+    "title": "You keep 70% of every sale",
+    "content": "<p>The share is of the price the buyer paid after discounts. Earnings become payable 14 days after the order completes, and refunded orders don't count. Payouts are sent by hand for now, to the payout email support keeps on file for you: contact hello@beeper.buzz to set it.</p>",
+    "settings": {
+      "creator_share": 70,
+      "example_price": 8,
+      "slider_min": 0.5,
+      "slider_max": 50
+    }
+  },
+  {
+    "section_type": "features",
+    "title": "What you can sell",
+    "content": "",
+    "settings": {
+      "items": [
+        {
+          "kind": "sample_pack",
+          "title": "Sample packs",
+          "body": "Up to 16 one-shots or loops, each mapped to a pad, a key zone or both. They load straight into the Sampler and work offline once downloaded."
+        },
+        {
+          "kind": "effect_preset",
+          "title": "Effect presets",
+          "body": "Settings for the app's nine effects: drive, crush, EQ, chorus, phaser, echo, reverb, pump and compressor. One tap applies the whole chain."
+        },
+        {
+          "kind": "visualizer",
+          "title": "Visualizers",
+          "body": "A GLSL shader with up to eight parameters, driven by the bass, mids, highs and the beat, or a 3D scene in glTF. You preview it live in the browser while you build it."
+        }
+      ]
+    }
+  },
+  {
+    "section_type": "steps",
+    "title": "How it works",
+    "content": "",
+    "settings": {
+      "items": [
+        { "title": "Apply", "body": "Send a few examples of your work with your application." },
+        { "title": "Build", "body": "Once approved, make products in the creator studio: upload files, map samples to pads, set a price." },
+        { "title": "Submit", "body": "Send each product for review. We listen to it, check it loads in the app and put it live." },
+        { "title": "Get paid", "body": "Buyers download it into the Beeper app. You see every sale and get paid from your balance." }
+      ]
+    }
+  },
+  {
+    "section_type": "products",
+    "title": "In the marketplace now",
+    "content": "<p>Made by creators, playable in the app today.</p>",
+    "settings": {
+      "source": "marketplace",
+      "limit": 8,
+      "link_text": "See the marketplace",
+      "link": "/browse?mode=marketplace"
+    }
+  },
+  {
+    "section_type": "faq",
+    "title": "Questions",
+    "content": "",
+    "settings": {
+      "items": [
+        { "question": "What does it cost to sell?", "answer": "Nothing up front. Beeper keeps 30% of the price the buyer paid after discounts, and you keep 70%." },
+        { "question": "Who sets the price?", "answer": "You do, per product, from $0.50 to $999." },
+        { "question": "When do I get paid?", "answer": "Earnings become payable 14 days after the order completes. Payouts are sent by hand for now, to the payout email support keeps on file for you." },
+        { "question": "Can I change a product after it's live?", "answer": "Yes. Name, description, price and categories change straight away. New files or preview media go back through review before buyers get them." },
+        { "question": "Who reviews my products?", "answer": "We do. We listen to every product, check that it loads in the app and then put it live." }
+      ]
+    }
+  },
+  {
+    "section_type": "call_to_action",
+    "title": "Your sounds, on every Beeper",
+    "content": "<p>Applying takes a few minutes. You'll need a Beeper account.</p>",
+    "settings": {
+      "button_text": "Apply to sell",
+      "button_link": "/account/creator"
+    }
+  }
+]

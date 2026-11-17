@@ -176,6 +176,17 @@ Done!
 http://localhost:8080/apidocs/swagger_ui
 Make sure to change the port that the UI is expecting in the search bar
 
+## Page sections (storefront CMS)
+
+Admin → **Homepage Sections** now has a tab per storefront page (`HomepageSection::PAGES`: `home`, `creators`). Each section belongs to one page via `page_key`; positions and up/down moves are per page. The API filters with `?page_key=` and defaults to `home`, so the homepage feed is unchanged. The settings field takes JSON and shows an example for the chosen section type.
+
+Seed a page's default sections from `db/cms/<page>.json` (skips a page that already has sections; `FORCE=1` replaces them):
+
+```
+bin/rails db:migrate
+bin/rake "beeper:cms:seed_page[creators]"
+```
+
 ## Device firmware releases
 
 Hardware firmware is released as **bundles**: one tested set of signed images (`stm32`,
