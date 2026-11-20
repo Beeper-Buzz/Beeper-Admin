@@ -18,6 +18,9 @@
 
 # dotenv
 envvars.txt
+# Heroku `config:get` dumps land here; it holds live secrets (AWS keys,
+# DATABASE_PASS, SECRET_KEY_BASE, TWILIO_TOKEN_AUTH). Never commit it.
+config.txt
 .env
 .env.development
 .env.test
