@@ -55,9 +55,9 @@ heroku config:set RAILS_LOG_TO_STDOUT=true -a $APP_NAME
 heroku config:set RAILS_SERVE_STATIC_FILES=true -a $APP_NAME
 
 # Branding
-heroku config:set COMPANY_LOGO=/assets/beeper_logo.png -a $APP_NAME
-heroku config:set LOGIN_BACKGROUND=/assets/beeper-login-background.jpg -a $APP_NAME
-heroku config:set COMPANY_BACKGROUND=/assets/beeper-login-background.jpg -a $APP_NAME
+heroku config:set COMPANY_LOGO=beeper/logo.png -a $APP_NAME
+heroku config:set LOGIN_BACKGROUND=beeper/login-background.jpg -a $APP_NAME
+heroku config:set COMPANY_BACKGROUND=beeper/login-background.jpg -a $APP_NAME
 
 # Site configuration
 heroku config:set SITE_TITLE="Beeper Admin" -a $APP_NAME
