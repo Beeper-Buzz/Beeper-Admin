@@ -18,7 +18,7 @@ Spree::Preferences::Store.instance.persistence = false if ENV['ASSETS_PRECOMPILE
 # In order to initialize a setting do:
 # config.setting_name = 'new value'
 Spree.config do |config|
-  config.admin_interface_logo = 'beeper_logo.png'
+  config.admin_interface_logo = 'beeper/logo.png'
   # Example:
   # Uncomment to stop tracking inventory levels in the application
   # config.track_inventory_levels = false
