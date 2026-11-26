@@ -17,7 +17,15 @@ class Spree::Api::V1::HomepageSectionsController < Spree::Api::BaseController
         key :required, false
         key :type, :boolean
       end
-      
+
+      parameter do
+        key :name, :page_key
+        key :in, :query
+        key :description, "Storefront page whose sections to return (#{HomepageSection::PAGES.join(', ')}; default: home)"
+        key :required, false
+        key :type, :string
+      end
+
       response 200 do
         key :description, "Successful"
         schema do
@@ -102,6 +110,9 @@ class Spree::Api::V1::HomepageSectionsController < Spree::Api::BaseController
     property :section_type do
       key :type, :string
     end
+    property :page_key do
+      key :type, :string
+    end
     property :content do
       key :type, :string
     end
@@ -127,7 +138,9 @@ class Spree::Api::V1::HomepageSectionsController < Spree::Api::BaseController
   def index
     visible_only = params[:visible_only].nil? ? true : params[:visible_only] == 'true'
     
-    @sections = visible_only ? HomepageSection.visible : HomepageSection.all
+    # One storefront page's sections; without page_key, the homepage as before.
+    @sections = HomepageSection.for_page(params[:page_key])
+    @sections = @sections.visible if visible_only
     @sections = @sections.order(position: :asc)
     
     count = @sections.count
@@ -189,6 +202,7 @@ class Spree::Api::V1::HomepageSectionsController < Spree::Api::BaseController
       :content,
       :position,
       :is_visible,
+      :page_key,
       settings: {}
     )
   end
@@ -198,6 +212,7 @@ class Spree::Api::V1::HomepageSectionsController < Spree::Api::BaseController
       id: section.id,
       title: section.title,
       section_type: section.section_type,
+      page_key: section.page_key,
       content: section.content,
       position: section.position,
       is_visible: section.is_visible,

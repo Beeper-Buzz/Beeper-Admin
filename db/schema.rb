@@ -311,7 +311,9 @@ ActiveRecord::Schema.define(version: 2026_11_26_100000) do
     t.json "settings"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.string "page_key", default: "home", null: false
     t.index ["is_visible"], name: "index_homepage_sections_on_is_visible"
+    t.index ["page_key", "position"], name: "index_homepage_sections_on_page_key_and_position"
     t.index ["position"], name: "index_homepage_sections_on_position"
     t.index ["section_type"], name: "index_homepage_sections_on_section_type"
   end
