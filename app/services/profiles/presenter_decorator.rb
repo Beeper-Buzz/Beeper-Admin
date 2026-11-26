@@ -1,3 +1,8 @@
+# Profiles::Presenter is referenced before the module is opened: application.rb loads decorators
+# with the classic autoloader, and a bare `module Profiles` here would define an empty Profiles
+# before app/services/profiles.rb loads, leaving Profiles.config undefined.
+Profiles::Presenter
+
 module Profiles
   # Beeper: users whose photo was set on the web only have spree_users.avatar_url (a URL they
   # typed, no upload). The presenter applies the host rules; see PROFILE_AVATAR_URL_HOSTS.
