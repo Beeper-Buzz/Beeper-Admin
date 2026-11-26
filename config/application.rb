@@ -2,6 +2,11 @@ require_relative 'boot'
 
 require 'rails/all'
 
+# OpenStruct is used by the homepage_sections composed-settings fieldsets. It is
+# stdlib but not autoloaded, and Ruby 3.4 moves it to a bundled gem, so require
+# it explicitly rather than relying on another gem having pulled it in first.
+require 'ostruct'
+
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)

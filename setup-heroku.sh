@@ -84,9 +84,9 @@ echo "   ✓ Secrets configured"
 echo ""
 echo "5️⃣  Setting default branding..."
 heroku config:set \
-  COMPANY_LOGO=/assets/beeper_logo.png \
-  LOGIN_BACKGROUND=/assets/beeper-login-background.jpg \
-  COMPANY_BACKGROUND=/assets/beeper-login-background.jpg \
+  COMPANY_LOGO=beeper/logo.png \
+  LOGIN_BACKGROUND=beeper/login-background.jpg \
+  COMPANY_BACKGROUND=beeper/login-background.jpg \
   SITE_TITLE="Beeper Admin" \
   SITE_ADMIN_NAME="Admin" \
   -a $APP_NAME

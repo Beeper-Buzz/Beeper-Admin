@@ -3,6 +3,11 @@ module Spree
     # CMS sections for the storefront's pages (homepage, /creators, ...). The
     # index shows one page at a time, picked by `page_key`.
     class HomepageSectionsController < Spree::Admin::BaseController
+      SETTINGS_FIELD_KEYS = {
+        'announcement_bar' => %w[message cta_label cta_href dismissible starts_at ends_at],
+        'app_links' => %w[ios_url android_url]
+      }.freeze
+
       before_action :set_homepage_section, only: [:edit, :update, :destroy, :show]
       before_action :set_page_key, only: [:index, :new]
 
@@ -21,7 +26,7 @@ module Spree
       end
 
       def create
-        @homepage_section = HomepageSection.new(homepage_section_params)
+        @homepage_section = HomepageSection.new(composed_settings(homepage_section_params))
 
         respond_to do |format|
           if @homepage_section.save
@@ -44,7 +49,7 @@ module Spree
 
       def update
         respond_to do |format|
-          if @homepage_section.update(homepage_section_params)
+          if @homepage_section.update(composed_settings(homepage_section_params))
             flash[:success] = Spree.t('homepage_section.update_success')
             format.html { redirect_to page_sections_path(@homepage_section) }
             format.json { render json: @homepage_section }
@@ -127,8 +132,35 @@ module Spree
           :position,
           :is_visible,
           :settings,
-          :page_key
+          :page_key,
+          settings_fields: SETTINGS_FIELD_KEYS.values.flatten.uniq
         )
+      end
+
+      # announcement_bar and app_links edit their settings through discrete
+      # fields rather than the JSON textarea. Both fieldsets are always in the
+      # form, so only the keys belonging to the effective section type are
+      # kept. Every other type passes through untouched.
+      def composed_settings(attrs)
+        fields = attrs.delete(:settings_fields)
+        type = attrs[:section_type].presence || @homepage_section&.section_type
+        keys = SETTINGS_FIELD_KEYS[type]
+        return attrs unless keys
+
+        attrs.delete(:settings)
+        existing = @homepage_section&.section_type == type ? @homepage_section.settings : nil
+        composed = existing.is_a?(Hash) ? existing.slice(*keys) : {}
+
+        (fields || {}).to_h.slice(*keys).each do |key, value|
+          composed[key] =
+            case key
+            when 'dismissible' then ActiveModel::Type::Boolean.new.cast(value)
+            when 'starts_at', 'ends_at' then value.presence
+            else value
+            end
+        end
+
+        attrs.merge(settings: composed)
       end
     end
   end

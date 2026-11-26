@@ -36,6 +36,8 @@ class HomepageSection < Spree::Base
     steps
     faq
     custom
+    announcement_bar
+    app_links
   ].freeze
 
   validates :section_type, inclusion: { in: SECTION_TYPES }
