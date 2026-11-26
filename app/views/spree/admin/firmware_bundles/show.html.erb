@@ -98,37 +98,37 @@
           <%= form_with model: @new_image, url: spree.admin_firmware_bundle_firmware_images_path(@bundle), method: :post, local: true,
                         multipart: true, id: 'firmware_image_form' do |f| %>
             <div class="row">
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :component, 'Component' %>
                   <%= f.select :component, Firmware::COMPONENTS, {}, class: 'form-control' %>
                 </div>
               </div>
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :version, 'Image version' %>
                   <%= f.text_field :version, class: 'form-control', placeholder: '1.4.0', required: true %>
                 </div>
               </div>
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :signature_key_id, 'Signing key id' %>
                   <%= f.text_field :signature_key_id, class: 'form-control', placeholder: 'stm32-release', required: true %>
                 </div>
               </div>
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :link_proto, 'link_proto' %>
                   <%= f.number_field :link_proto, class: 'form-control', min: 0 %>
                 </div>
               </div>
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :app_proto, 'app_proto' %>
                   <%= f.number_field :app_proto, class: 'form-control', min: 0 %>
                 </div>
               </div>
-              <div class="col-6 col-lg-4">
+              <div class="col-12 col-sm-6 col-lg-4">
                 <div class="form-group">
                   <%= f.label :content_hash, 'Assets content hash (optional)' %>
                   <%= f.text_field :content_hash, class: 'form-control' %>

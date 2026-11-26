@@ -6,14 +6,15 @@
   jQuery, the admin JS), so a phone on a slow connection gets a ~40 KB page
   instead of megabytes before it can type a password.
 %>
-<% store_name = (current_store.name if respond_to?(:current_store) && current_store).presence || 'Admin' %>
+<% theme = AdminTheme.current %>
+<% store_name = (current_store.name if respond_to?(:current_store) && current_store).presence || theme.brand_name.presence || 'Admin' %>
 <!DOCTYPE html>
 <html lang="<%= I18n.locale %>">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#14001f">
+    <meta name="theme-color" content="<%= theme.background_color %>">
     <meta name="color-scheme" content="dark">
     <meta name="format-detection" content="telephone=no">
     <title><%= content_for?(:title) ? yield(:title) : Spree.t(:login) %> · <%= store_name %></title>
@@ -23,9 +24,10 @@
 
     <style>
       :root {
-        --si-primary: #900093;
-        --si-accent: #ff008a;
-        --si-deep: #370062;
+        /* Brand colors come from the admin theme (Configuration > Theme). */
+        --si-primary: <%= theme.primary_color %>;
+        --si-accent: <%= theme.secondary_color %>;
+        --si-bg: <%= theme.background_color %>;
         --si-text: #f5f3f7;
         --si-muted: #b9b2c4;
         --si-card: rgba(20, 8, 32, 0.78);
@@ -47,9 +49,9 @@
         display: flex;
         flex-direction: column;
         color: var(--si-text);
-        background-color: #14001f;
+        background-color: var(--si-bg);
         background-image:
-          linear-gradient(180deg, rgba(20, 0, 31, 0.35) 0%, rgba(20, 0, 31, 0.85) 100%),
+          linear-gradient(180deg, color-mix(in srgb, var(--si-bg) 35%, transparent) 0%, color-mix(in srgb, var(--si-bg) 85%, transparent) 100%),
           url("<%= sign_in_mobile_background_path %>");
         background-size: cover;
         background-position: center;
@@ -64,7 +66,7 @@
       @media (min-width: 900px) and (min-resolution: 1.5dppx), (min-width: 1400px) {
         body {
           background-image:
-            linear-gradient(180deg, rgba(20, 0, 31, 0.35) 0%, rgba(20, 0, 31, 0.85) 100%),
+            linear-gradient(180deg, color-mix(in srgb, var(--si-bg) 35%, transparent) 0%, color-mix(in srgb, var(--si-bg) 85%, transparent) 100%),
             url("<%= sign_in_background_path %>");
         }
       }
@@ -167,7 +169,7 @@
       .si-input::placeholder { color: rgba(255, 255, 255, 0.35); }
       .si-input:focus {
         border-color: var(--si-accent);
-        box-shadow: 0 0 0 3px rgba(255, 0, 138, 0.25);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--si-accent) 30%, transparent);
       }
       .si-input--with-toggle { padding-right: 76px; }
 
@@ -249,7 +251,7 @@
         background: linear-gradient(135deg, var(--si-primary) 0%, var(--si-accent) 100%);
         border: 0;
         border-radius: var(--si-radius);
-        box-shadow: 0 8px 24px rgba(255, 0, 138, 0.3);
+        box-shadow: 0 8px 24px color-mix(in srgb, var(--si-accent) 30%, transparent);
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
@@ -297,7 +299,11 @@
   <body>
     <main class="si-main">
       <div class="si-card">
-        <%= image_tag sign_in_logo_path, class: 'si-logo', alt: store_name %>
+        <% if theme.logo.attached? %>
+          <%= image_tag main_app.rails_storage_proxy_path(theme.logo, disposition: :inline), class: 'si-logo', alt: store_name %>
+        <% else %>
+          <%= image_tag sign_in_logo_path, class: 'si-logo', alt: store_name %>
+        <% end %>
         <%= yield %>
       </div>
     </main>
