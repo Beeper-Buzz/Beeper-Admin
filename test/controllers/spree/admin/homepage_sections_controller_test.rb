@@ -71,15 +71,15 @@ class Spree::Admin::HomepageSectionsControllerTest < ActionDispatch::Integration
     assert_select 'input[name="homepage_section[settings_fields][android_url]"]'
   end
 
-  test 'leaves the raw settings textarea behaviour intact for other types' do
+  test 'other types keep the JSON textarea and ignore the callout fields' do
     post admin_homepage_sections_path, params: { homepage_section: {
       title: 'Hero', section_type: 'hero', position: 0, settings: '{"a":1}',
       settings_fields: { message: 'ignored' }
     } }
     section = HomepageSection.last
     assert_equal 'hero', section.section_type
-    # Pre-existing behaviour, deliberately unchanged: the textarea value is stored as a JSON string.
-    assert_equal '{"a":1}', section.settings
+    # The textarea's JSON is stored parsed (HomepageSection#settings=), and the callout fields are dropped.
+    assert_equal({ 'a' => 1 }, section.settings)
   end
 
   test 'sets flash from locale keys, not translation-missing strings' do

@@ -1,14 +1,23 @@
 <% content_for :page_title do %>
-  <%= Spree.t(:homepage_sections) %>
+  <%= @page_key.titleize %> Page Sections
 <% end %>
 
 <% content_for :page_actions do %>
-  <%= button_link_to 'Add Homepage Section', spree.new_admin_homepage_section_path, class: "btn-success", icon: 'add.svg' if can?(:create, HomepageSection) %>
+  <%= button_link_to "Add #{@page_key.titleize} Section", spree.new_admin_homepage_section_path(page_key: @page_key), class: "btn-success", icon: 'add.svg' if can?(:create, HomepageSection) %>
 <% end %>
+
+<ul class="nav nav-tabs mb-3" data-hook="admin_homepage_sections_pages">
+  <% HomepageSection::PAGES.each do |key| %>
+    <li class="nav-item">
+      <%= link_to key.titleize, admin_homepage_sections_path(page_key: key), class: "nav-link #{'active' if key == @page_key}" %>
+    </li>
+  <% end %>
+</ul>
 
 <% content_for :table_filter do %>
   <div data-hook="admin_homepage_sections_sidebar">    
     <%= search_form_for @q, url: admin_homepage_sections_path do |f| %>
+      <%= hidden_field_tag :page_key, @page_key %>
       <div data-hook="admin_homepage_sections_index_search" class="row">
         <div class="col-12 col-lg-6">
           <div class="form-group">
@@ -47,7 +56,7 @@
         <% @collection.each do |section| %>
           <tr class="homepage_section_<%= section.id %>">
             <td class="text-center"><%= section.position %></td>
-            <td><%= link_to section.title, edit_admin_homepage_section_path(section) %></td>
+            <td><%= link_to section.title.presence || section.section_type.titleize, edit_admin_homepage_section_path(section) %></td>
             <td>
               <%= link_to edit_admin_homepage_section_path(section), class: 'badge badge-secondary section-type-badge' do %>
                 <%= section.section_type.titleize %>
@@ -88,7 +97,7 @@
   <%= paginate @collection, theme: 'admin-twitter-bootstrap-4' %>
 <% else %>
   <div class="alert alert-info no-objects-found" role="alert">
-    <%= Spree.t(:no_resource_found, resource: 'homepage sections') %>
+    <%= Spree.t(:no_resource_found, resource: "#{@page_key} page sections") %>
   </div>
 <% end %>
 
