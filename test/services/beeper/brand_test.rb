@@ -28,8 +28,20 @@ class BeeperBrandTest < ActiveSupport::TestCase
     assert_equal 'Staging Admin', env['SITE_TITLE']
   end
 
+  test 'phones get the small copy of the default background' do
+    env = {}
+    BeeperBrand.apply!(env)
+    assert_equal 'beeper/login-background-mobile.jpg', env['COMPANY_BACKGROUND_MOBILE']
+  end
+
+  test 'a different background gets no Beeper phone copy' do
+    env = { 'COMPANY_BACKGROUND' => 'other/background.jpg' }
+    BeeperBrand.apply!(env)
+    assert_nil env['COMPANY_BACKGROUND_MOBILE']
+  end
+
   test 'every default is a file in app/assets/images' do
-    BeeperBrand::DEFAULTS.values_at('COMPANY_LOGO', 'COMPANY_BACKGROUND', 'LOGIN_BACKGROUND').each do |path|
+    (BeeperBrand::DEFAULTS.values_at('COMPANY_LOGO', 'COMPANY_BACKGROUND', 'LOGIN_BACKGROUND') + [BeeperBrand::MOBILE_BACKGROUND]).each do |path|
       assert Rails.root.join('app/assets/images', path).file?, "missing app/assets/images/#{path}"
     end
   end

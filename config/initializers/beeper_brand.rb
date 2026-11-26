@@ -22,10 +22,20 @@ module BeeperBrand
     'beeper-login-background.jpg' => 'beeper/login-background.jpg'
   }.freeze
 
+  # The 1280px copy of the login background that phones get (about 40 KB instead of 1.9 MB);
+  # read by the sign-in layout through COMPANY_BACKGROUND_MOBILE.
+  MOBILE_BACKGROUND = 'beeper/login-background-mobile.jpg'.freeze
+
   def self.apply!(env = ENV)
     DEFAULTS.each do |key, default|
       value = env[key].to_s.strip
       env[key] = value.empty? ? default : MOVED.fetch(value, value)
+    end
+
+    # Only while the background is Beeper's own: a different COMPANY_BACKGROUND with no phone
+    # copy named falls back to itself rather than to Beeper's image.
+    if env['COMPANY_BACKGROUND_MOBILE'].to_s.strip.empty? && env['COMPANY_BACKGROUND'] == DEFAULTS['COMPANY_BACKGROUND']
+      env['COMPANY_BACKGROUND_MOBILE'] = MOBILE_BACKGROUND
     end
   end
 end

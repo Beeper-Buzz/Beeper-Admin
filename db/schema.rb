@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_11_17_120000) do
+ActiveRecord::Schema.define(version: 2026_11_26_100000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -60,6 +60,25 @@ ActiveRecord::Schema.define(version: 2026_11_17_120000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_themes", force: :cascade do |t|
+    t.string "brand_name", default: "Beeper"
+    t.string "primary_color", default: "#900093"
+    t.string "secondary_color", default: "#ff008a"
+    t.string "surface_color", default: "#1d0b2b"
+    t.string "background_color", default: "#14001f"
+    t.string "text_color", default: "#f5f3f7"
+    t.string "sidebar_color", default: "#170823"
+    t.string "border_radius", default: "8px"
+    t.string "font_family", default: "Inter, system-ui, sans-serif"
+    t.string "color_mode", default: "system"
+    t.boolean "enable_animations", default: true
+    t.text "custom_css"
+    t.integer "singleton_guard", default: 0, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["singleton_guard"], name: "index_admin_themes_on_singleton_guard", unique: true
   end
 
   create_table "affiliate_accounts", force: :cascade do |t|
