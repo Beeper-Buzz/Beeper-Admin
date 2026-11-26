@@ -11,9 +11,11 @@ class HerokuYmlTest < ActiveSupport::TestCase
     assert_equal ["bundle exec rails db:migrate"], @config.dig("release", "command")
   end
 
-  test "the web process is unchanged: assets precompile at boot, on the web dyno" do
-    assert_includes @config.dig("run", "web"), "rake assets:precompile"
+  # Assets are precompiled into the image (Dockerfile), so the web dyno only starts the server.
+  test "the web process starts the server without precompiling assets" do
     assert_includes @config.dig("run", "web"), "rails server"
+    refute_includes @config.dig("run", "web"), "assets:precompile"
     assert_equal "Dockerfile", @config.dig("build", "docker", "web")
+    assert_match(/assets:precompile/, Rails.root.join("Dockerfile").read)
   end
 end
