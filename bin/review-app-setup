@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Postdeploy script for Heroku review apps (app.json). Runs once, after the first release.
+#
+# 1. Loads db/schema.rb. heroku.yml's release phase has already run db:migrate on the empty
+#    database, but the migrations alone do not build the full schema: some tables and columns
+#    (spree_loyalty_points' among them) exist only in schema.rb, and Spree::User cannot be
+#    created without them.
+# 2. Creates a default store and the admin user from ADMIN_EMAIL / ADMIN_PASSWORD.
+#
+# Loading the schema wipes the database, so this refuses to run outside a review app:
+# Heroku sets HEROKU_PR_NUMBER only on review apps.
+set -euo pipefail
+
+if [ -z "${HEROKU_PR_NUMBER:-}" ]; then
+  echo "HEROKU_PR_NUMBER is not set: this is not a review app, so the schema is not loaded." >&2
+  exit 1
+fi
+
+DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rails db:schema:load
+bundle exec rails runner db/review_app_setup.rb

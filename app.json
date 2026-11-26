@@ -1,0 +1,37 @@
+{
+  "name": "DNA Admin",
+  "description": "Spree admin, CMS and API. Heroku review apps build from heroku.yml (the Dockerfile), the same as production.",
+  "stack": "container",
+  "formation": {
+    "web": { "quantity": 1, "size": "standard-1x" }
+  },
+  "addons": ["heroku-postgresql:essential-0"],
+  "env": {
+    "RAILS_ENV": { "value": "production" },
+    "RACK_ENV": { "value": "production" },
+    "RAILS_LOG_TO_STDOUT": { "value": "enabled" },
+    "RAILS_SERVE_STATIC_FILES": { "value": "enabled" },
+    "SECRET_KEY_BASE": { "generator": "secret" },
+    "DEVISE_SECRET_KEY": { "generator": "secret" },
+    "TOKEN_KEY_BASE": { "generator": "secret" },
+    "TOKEN_EXPIRATION": { "value": "3600" },
+    "AWS_REGION_NAME": {
+      "description": "Active Storage builds its S3 client at boot, so a region is needed even without real keys. Set the AWS_* vars on the pipeline's review stage to give review apps working uploads.",
+      "value": "us-east-1"
+    },
+    "AWS_BUCKET_NAME": { "value": "review-app-uploads-disabled", "required": false },
+    "AWS_ACCESS_KEY_ID": { "value": "review-app-placeholder", "required": false },
+    "AWS_SECRET_ACCESS_KEY": { "value": "review-app-placeholder", "required": false },
+    "ADMIN_EMAIL": {
+      "description": "Admin user created by the postdeploy script.",
+      "value": "admin@example.com"
+    },
+    "ADMIN_PASSWORD": {
+      "description": "That admin's password. Read it from the review app's config vars.",
+      "generator": "secret"
+    }
+  },
+  "scripts": {
+    "postdeploy": "bin/review-app-setup"
+  }
+}
