@@ -1,18 +1,20 @@
-# Beeper's admin types for the Spree Admin Native app, on top of the generic ones in
-# spree_admin_native_resources.rb (inherited from dna-admin):
+# Beeper's admin types for the Spree Admin Native app (spree_admin_native 0.5), on top of the
+# generic ones in spree_admin_native_resources.rb (inherited from dna-admin):
 # - homepage sections get Beeper's page_key (the homepage or /creators), as in the admin;
 # - the Δ8 firmware releases (bundles, images, install reports) under a Firmware group. Writes
 #   follow Spree::Admin::FirmwareBundlesController and FirmwareImagesController; FirmwareBundle
-#   and FirmwareImage enforce what may change once a bundle is out of draft.
+#   and FirmwareImage enforce what may change once a bundle is out of draft, and the app is told
+#   per record (can.update / can.destroy) so it only offers what they allow.
 
-# Runs after the inherited type is registered (and again after each reload).
-ActiveSupport.on_load(:spree_admin_native_resource, yield: true) do |r|
-  next unless r.key == 'homepage_sections'
-
-  pages = 'HomepageSection::PAGES'.safe_constantize
-  r.field :page_key, :enum, options: pages, label: 'Page'
-  r.filter :page_key, pages
-  r.list :title, :page_key, :section_type, :position, :is_visible
+# Runs now if the inherited type is registered, and again whenever it is (at boot, whichever
+# initializer loads first, and after each reload).
+if defined?(SpreeAdminNative) && SpreeAdminNative.respond_to?(:resources)
+  SpreeAdminNative.resources.configure('homepage_sections') do |r|
+    pages = 'HomepageSection::PAGES'.safe_constantize
+    r.field :page_key, :enum, options: pages, label: 'Page'
+    r.filter :page_key, pages
+    r.list :title, :page_key, :section_type, :position, :is_visible
+  end
 end
 
 Rails.application.config.to_prepare do
@@ -52,7 +54,17 @@ Rails.application.config.to_prepare do
     r.field :created_by, :string, readonly: true
     r.field :created_at
     r.field :updated_at
-    # New bundles are drafts (the state column's default); only drafts can be deleted (FirmwareBundle).
+    # New bundles are drafts (the state column's default), recorded with the admin's email as in
+    # the admin's create. Only drafts can be deleted: FirmwareBundle refuses the rest, and the app
+    # doesn't offer it. A released bundle stays editable (channel, rollout, minimum app version,
+    # notes); FirmwareBundle keeps its hardware revision, version and security epoch.
+    r.before_save do |bundle, admin, op|
+      next unless op == :create
+
+      bundle.state = 'draft'
+      bundle.created_by = admin&.email
+    end
+    r.deletable_if ->(bundle) { bundle.draft? }
     r.action :publish, label: 'Publish', confirm: 'Publish this bundle? Devices in the rollout are offered it.',
                        if: ->(b) { b.draft? } do |bundle, _admin|
       transition.call(bundle, :publish!, 'published')
@@ -80,8 +92,11 @@ Rails.application.config.to_prepare do
     r.list :component, :version, :firmware_bundle_id, :size
     r.search :component, :version
     r.filter :component, options.call('Firmware::COMPONENTS')
+    r.filter :firmware_bundle_id
     r.order :created_at, :desc
     r.field :firmware_bundle_id, :reference, resource: 'firmware_bundles', label: 'Bundle'
+    # The signed image, to download as on the admin's bundle page; never uploaded from the app.
+    r.field :file, :file, label: 'Image file', readonly: true
     r.field :component, :string
     r.field :version, :string
     r.field :size, :integer, label: 'Size (bytes)'
@@ -94,6 +109,7 @@ Rails.application.config.to_prepare do
     # Images are uploaded (and checked against their sha256 and signature) in the admin or by CI;
     # a draft bundle's image can be removed (FirmwareImage refuses it once the bundle is out).
     r.actions create: false, update: false
+    r.deletable_if ->(image) { image.bundle&.draft? }
   end
 
   resources.register 'firmware_reports' do |r|
@@ -107,6 +123,8 @@ Rails.application.config.to_prepare do
     r.search :device_hash, :error_code
     r.filter :result, options.call('FirmwareReport::RESULTS')
     r.filter :platform, options.call('FirmwareReport::PLATFORMS')
+    r.filter :firmware_bundle_id
+    r.filter :created_at, :date_range
     r.order :created_at, :desc
     # What the admin's bundle page shows; the reporting user is not.
     r.field :firmware_bundle_id, :reference, resource: 'firmware_bundles', label: 'Bundle'
