@@ -396,11 +396,31 @@ Spree::Core::Engine.add_routes do
       # M4 email link (review request token). :review_token, since the API reads params[:token] as an API key.
       get 'review_requests/:review_token', to: 'review_requests#show', as: :review_request_link
       post 'review_requests/:review_token/opt_out', to: 'review_requests#opt_out', as: :review_request_opt_out
+      # M7 AI summaries: service endpoints for the storefront's summarizer (admin API key).
+      namespace :admin do
+        get 'review_summaries/stale', to: 'review_summaries#stale', as: :stale_review_summaries
+        get 'products/:product_id/reviews_for_summary', to: 'review_summaries#reviews_for_summary',
+                                                         as: :product_reviews_for_summary
+        put 'review_summaries/:product_id', to: 'review_summaries#update', as: :review_summary
+      end
       resources :reviews, only: %i[create update destroy] do
         post :votes, on: :member
       end
+      # M5 store reviews.
+      get 'store_reviews/summary', to: 'store_reviews#summary', as: :store_review_summary
+      get 'store_reviews/form', to: 'store_reviews#form', as: :store_review_form
+      resources :store_reviews, only: %i[index create update]
+      # M6 product questions.
+      get 'products/:product_id/questions', to: 'product_questions#index', as: :product_questions_list
+      post 'products/:product_id/questions', to: 'product_questions#create', as: :product_questions_create
     end
   end
+end
+
+# M8: Google product review feed. Public XML, served outside /api (Feeds::GoogleProductReviewsController).
+Rails.application.routes.draw do
+  get 'feeds/google/product_reviews', to: 'feeds/google_product_reviews#show', as: :google_product_reviews_feed,
+                                      defaults: { format: 'xml' }, constraints: { format: 'xml' }
 end
 
 # Product reviews: admin (Reviews menu).
@@ -420,6 +440,20 @@ Spree::Core::Engine.add_routes do
       end
     end
     # reviews-admin-routes: more review admin routes go below this line
+    # M7: Regenerate on the product Reviews tab (marks the AI summary stale, asks the storefront).
+    resources :products, only: [] do
+      resources :product_reviews, only: [], path: 'reviews' do
+        collection { post :regenerate_ai_summary }
+      end
+    end
+    # Reviews > Questions (M6): the product question queue and its answer form.
+    resources :product_questions, path: 'questions', only: %i[index show] do
+      member do
+        post :answer
+        post :reject
+        delete 'answers/:answer_id', action: :destroy_answer, as: :destroy_answer
+      end
+    end
     resources :review_requests, only: %i[index]
     # Product "Reviews" tab: /admin/products/:product_id/reviews (stats, AI summary, that product's reviews).
     resources :products, only: [] do
