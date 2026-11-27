@@ -63,6 +63,9 @@ gem 'paperclip', '~> 6.1.0'
 gem 'sprockets-helpers', '~> 1.2.1'
 
 gem 'rest-client'
+
+# In-app purchase verification (StoreKit 2 JWS, App Store Server API, Google Play service-account tokens)
+gem 'jwt', '~> 2.7'
 # Tool to create APi and it's documentation
 gem 'swagger-blocks'
 
@@ -95,7 +98,11 @@ end
 group :test do
   # Adds support for Capybara system testing and selenium driver
   gem 'capybara', '>= 2.15'
-  gem 'selenium-webdriver'
+  gem 'matrix'
+  # Pinned to 3.x: chromedriver-helper 2.1.1 calls
+  # Selenium::WebDriver::Chrome.driver_path= at load, which Selenium 4 removed,
+  # so an unpinned resolve to 4.x aborts `rails test` at boot.
+  gem 'selenium-webdriver', '~> 3.142'
   # Easy installation and use of chromedriver to run system tests with Chrome
   gem 'chromedriver-helper', require: false
   # Stub all outbound HTTP in tests (the track generator is never called for real)

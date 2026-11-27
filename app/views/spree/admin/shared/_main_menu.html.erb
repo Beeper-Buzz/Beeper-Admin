@@ -16,6 +16,15 @@
     </ul>
   <% end %>
 
+  <% if can? :admin, Spree::IapTransaction %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarIapOrders">
+      <%# Built by hand: the tab helper titleizes labels ("Iap Orders"). %>
+      <li class="sidebar-menu-item d-block w-100 position-relative <%= 'selected' if %w[iap_transactions iap_products].include?(controller_name) %>">
+        <%= link_to_with_icon 'list.svg', 'IAP Orders', spree.admin_iap_transactions_path, class: 'w-100 p-3 d-flex align-items-center' %>
+      </li>
+    </ul>
+  <% end %>
+
   <% if can?(:admin, Spree::ReturnAuthorization) || can?(:admin, Spree::CustomerReturn) %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarReturn">
       <%= main_menu_tree Spree.t(:returns), icon: "returns.svg", sub_menu: "returns", url: "#sidebar-returns" %>
@@ -49,6 +58,12 @@
   <% if can? :admin, HomepageSection %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarHomepage">
       <%= tab :homepage_sections, icon: 'list.svg', url: admin_homepage_sections_path %>
+    </ul>
+  <% end %>
+
+  <% if can? :admin, ContentAsset %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarContentAssets">
+      <%= tab :content_assets, icon: 'page.svg', url: admin_content_assets_path %>
     </ul>
   <% end %>
 
@@ -99,6 +114,24 @@
   <% if can? :admin, Spree::ContentReport %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarContentReports">
       <%= tab :content_reports, label: 'Content reports', icon: 'report.svg', url: spree.admin_content_reports_path %>
+    </ul>
+  <% end %>
+
+  <% if can? :admin, Spree::Review %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarReviews">
+      <%= tab :reviews, label: 'Reviews', icon: 'review.svg', url: spree.admin_reviews_path %>
+      <%# reviews-menu: more review tabs go below this line %>
+      <%= tab :review_requests, label: 'Review emails', icon: 'envelope.svg', url: spree.admin_review_requests_path %>
+      <% if can? :admin, Spree::ReviewAttribute %>
+        <li class="sidebar-menu-item d-block w-100 position-relative <%= 'selected' if controller_name == 'review_attributes' %>" id="sidebar_review_questions">
+          <%= link_to_with_icon 'list.svg', 'Review questions', spree.admin_review_attributes_path, class: 'w-100 p-3 d-flex align-items-center' %>
+        </li>
+      <% end %>
+      <% if can? :admin, Spree::ReviewSetting %>
+        <li class="sidebar-menu-item d-block w-100 position-relative <%= 'selected' if controller_name == 'review_settings' %>" id="sidebar_review_settings">
+          <%= link_to_with_icon 'settings.svg', 'Review settings', spree.edit_admin_review_settings_path, class: 'w-100 p-3 d-flex align-items-center' %>
+        </li>
+      <% end %>
     </ul>
   <% end %>
 

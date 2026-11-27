@@ -243,6 +243,47 @@ heroku ps:scale web=1 -a $APP_NAME
 heroku restart -a $APP_NAME
 ```
 
+## Scheduled Tasks: Review Request Emails
+
+The "How's your order?" review emails are sent by a rake task, not a job queue (the app has no
+persistent queue). Run it every hour:
+
+```bash
+heroku addons:create scheduler:standard -a $APP_NAME
+heroku addons:open scheduler -a $APP_NAME
+```
+
+In the Scheduler dashboard, add a job:
+
+- Command: `bundle exec rake reviews:dispatch`
+- Frequency: every hour
+
+Each run sends due request emails and reminders, expires old requests and marks finished ones
+completed, then prints counts (`reviews:dispatch sent=3 reminded=1 ...`). It is safe to run twice or
+by hand (`heroku run bundle exec rake reviews:dispatch -a $APP_NAME`): nothing is sent twice. Nothing
+is sent while reviews are switched off in Reviews > Settings.
+
+Needs `SITE_URL` (the storefront's base URL; the email links go to `$SITE_URL/review/<token>`) and
+the Mailgun settings. Set `ADMIN_URL` to this app's public address (e.g. `https://admin.example.com`):
+emails use it for product images, the store logo and the background pattern
+(`config/initializers/mailer_host.rb`). Without it, emails still send, just without images.
+
+Every customer email (review requests and Spree's order, shipment and account emails) uses one
+frame, `app/views/shared/_email_frame.html.erb`: patterned background, the store's **Mailer logo**
+(Configurations > Stores > edit store; falls back to the store logo, then the store name), a card,
+and a footer with the store address, support email, Instagram/Facebook/X links and the copyright
+line, all from the store's settings. Dark mode follows the reader's system setting in Apple Mail,
+iOS Mail and Outlook for Mac. Preview in development at `/rails/mailers/review_request_mailer`.
+
+At launch, schedule emails for orders that shipped in the last 30 days (sent over the next runs,
+200 an hour):
+
+```bash
+heroku run bundle exec rake "reviews:backfill[30]" -a $APP_NAME
+```
+
+On Kubernetes, `k8-cronjob-reviews.yml` runs the same task hourly as a CronJob.
+
 ## Troubleshooting
 
 ### "No default language could be detected" error

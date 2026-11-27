@@ -10,8 +10,35 @@ Rails.application.routes.draw do
 end
 
 Spree::Core::Engine.add_routes do
+  # In-app purchases (App Store / Google Play): app API, store notifications, admin.
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v1 do
+      namespace :iap do
+        resources :transactions, only: %i[index show create]
+        resources :entitlements, only: :index
+        resources :products, only: :index
+        post :restore, to: 'restores#create'
+        get :account_token, to: 'account_tokens#show'
+        post 'apple/notifications', to: 'apple_notifications#create', as: :apple_notifications
+        post 'google/notifications', to: 'google_notifications#create', as: :google_notifications
+      end
+    end
+  end
+
   namespace :admin, path: Spree.admin_path do
-    resources :messages do      
+    resources :iap_transactions, only: %i[index show] do
+      member { post :revoke }
+    end
+    resources :iap_products, except: :show
+    resources :entitlements, only: [] do
+      member { post :revoke }
+    end
+  end
+
+  namespace :admin, path: Spree.admin_path do
+    resource :theme, only: [:show, :update], controller: 'theme'
+
+    resources :messages do
       collection do
         get :conversation
         get :conversations
@@ -40,7 +67,9 @@ Spree::Core::Engine.add_routes do
         patch :toggle_visibility
       end
     end
-    
+
+    resources :content_assets, except: [:show]
+
     resources :contacts
     resources :app_settings, only: [:index, :create, :destroy]
 
@@ -82,6 +111,8 @@ Spree::Core::Engine.add_routes do
         post :remove_photo
         post :clear_bio
         post :lock_account
+        post :hide_review
+        post :restore_review
       end
     end
     resources :user_profiles, only: [] do
@@ -111,6 +142,7 @@ Spree::Core::Engine.add_routes do
         end
       end
       resources :homepage_sections
+      resources :content_assets, only: [:index, :show, :create, :update, :destroy]
       resources :favorites, only: [:index, :destroy] do
         collection do
           post :toggle
@@ -348,6 +380,56 @@ Spree::Core::Engine.add_routes do
           get :audio_url
         end
       end
+    end
+  end
+end
+
+# Product reviews: read and write endpoints. Contract: docs/plans/2026-11-26-reviews-api-contract.md.
+Spree::Core::Engine.add_routes do
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v1 do
+      get 'products/:product_id/review_summary', to: 'product_reviews#summary', as: :product_review_summary
+      get 'products/:product_id/reviews', to: 'product_reviews#index', as: :product_reviews_list
+      get 'products/:product_id/review_form', to: 'account_reviews#form', as: :product_review_form
+      get 'account/reviewables', to: 'account_reviews#reviewables', as: :account_reviewables
+      get 'account/reviews', to: 'account_reviews#index', as: :account_reviews
+      # M4 email link (review request token). :review_token, since the API reads params[:token] as an API key.
+      get 'review_requests/:review_token', to: 'review_requests#show', as: :review_request_link
+      post 'review_requests/:review_token/opt_out', to: 'review_requests#opt_out', as: :review_request_opt_out
+      resources :reviews, only: %i[create update destroy] do
+        post :votes, on: :member
+      end
+    end
+  end
+end
+
+# Product reviews: admin (Reviews menu).
+Spree::Core::Engine.add_routes do
+  namespace :admin do
+    resources :reviews, only: %i[index show] do
+      collection do
+        post :bulk
+      end
+      member do
+        post :publish
+        post :reject
+        post :hide
+        post :reply
+        post :change_channel
+        delete :photo, action: :destroy_photo
+      end
+    end
+    # reviews-admin-routes: more review admin routes go below this line
+    resources :review_requests, only: %i[index]
+    # Product "Reviews" tab: /admin/products/:product_id/reviews (stats, AI summary, that product's reviews).
+    resources :products, only: [] do
+      resources :product_reviews, only: :index, path: 'reviews' do
+        collection { post :toggle_ai_summary }
+      end
+    end
+    resource :review_settings, only: %i[show edit update]
+    resources :review_attributes, path: 'review_questions', except: :show do
+      collection { post :update_positions }
     end
   end
 end
