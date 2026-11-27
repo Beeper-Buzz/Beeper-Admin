@@ -4,7 +4,7 @@ require 'test_helper'
 # Native app, through /api/admin_native/v1/resources with an admin API key.
 class BeeperAdminNativeResourcesTest < ActionDispatch::IntegrationTest
   BASE = '/api/admin_native/v1/resources'.freeze
-  SECRET_LOOKING = /password|token|secret|digest|encrypted|api_key|salt|otp|private_key|credentials/i.freeze
+  SECRET_LOOKING = /password|token|secret|digest|encrypted|api_key|salt|otp|private_key|credentials|stream_key|signed_payload|jwt|cvv/i.freeze
   TYPES = %w[firmware_bundles firmware_images firmware_reports].freeze
 
   setup do
@@ -25,6 +25,14 @@ class BeeperAdminNativeResourcesTest < ActionDispatch::IntegrationTest
 
   def actions_of(bundle)
     call(:get, "/firmware_bundles/#{bundle.id}").dig('data', 'actions')
+  end
+
+  def manifest_of(key)
+    call(:get, '')['data'].find { |type| type['key'] == key }
+  end
+
+  def ids_of(body)
+    body['data'].map { |record| record['id'].to_i }
   end
 
   test 'the firmware types are in the manifest under Firmware, admins only' do
@@ -86,9 +94,13 @@ class BeeperAdminNativeResourcesTest < ActionDispatch::IntegrationTest
     assert_equal 201, response.status, response.body
     draft = FirmwareBundle.find(body.dig('data', 'id'))
     assert draft.draft?, 'new bundles are drafts'
+    assert_equal @admin.email, draft.created_by, 'recorded as in the admin'
+    assert_equal @admin.email, body.dig('data', 'values', 'created_by')
+    assert_equal({ 'update' => true, 'destroy' => true }, body.dig('data', 'can'))
     assert_equal %w[publish], body.dig('data', 'actions')
-    call(:patch, "/firmware_bundles/#{draft.id}", { version: '2.0.1' })
+    call(:patch, "/firmware_bundles/#{draft.id}", { version: '2.0.1', created_by: 'someone@example.com' })
     assert_equal 200, response.status
+    assert_equal ['2.0.1', @admin.email], [draft.reload.version, draft.created_by]
     call(:delete, "/firmware_bundles/#{draft.id}")
     assert_equal 204, response.status
 
@@ -98,9 +110,12 @@ class BeeperAdminNativeResourcesTest < ActionDispatch::IntegrationTest
     call(:patch, "/firmware_bundles/#{released.id}", { rollout_percent: 50, release_notes: 'Faster pairing' })
     assert_equal 200, response.status, response.body
     assert_equal [50, '1.5.0'], [released.reload.rollout_percent, released.version]
+    body = call(:get, "/firmware_bundles/#{released.id}")
+    assert_equal({ 'update' => true, 'destroy' => false }, body.dig('data', 'can'))
     call(:delete, "/firmware_bundles/#{released.id}")
-    assert_equal 422, response.status
+    assert_equal 403, response.status
     assert FirmwareBundle.exists?(released.id)
+    refute released.destroy, 'FirmwareBundle still refuses it'
   end
 
   test 'publish, pause, resume and revoke follow the bundle states' do
@@ -140,10 +155,54 @@ class BeeperAdminNativeResourcesTest < ActionDispatch::IntegrationTest
     assert_equal 403, response.status
     call(:patch, "/firmware_images/#{draft.images.first.id}", { version: '4.0.1' })
     assert_equal 403, response.status
+    body = call(:get, "/firmware_images/#{released.images.first.id}")
+    assert_equal({ 'update' => false, 'destroy' => false }, body.dig('data', 'can'))
     call(:delete, "/firmware_images/#{released.images.first.id}")
-    assert_equal 422, response.status
+    assert_equal 403, response.status
+    refute released.images.first.destroy, 'FirmwareImage still refuses it'
+    body = call(:get, "/firmware_images/#{draft.images.first.id}")
+    assert_equal({ 'update' => false, 'destroy' => true }, body.dig('data', 'can'))
     call(:delete, "/firmware_images/#{draft.images.first.id}")
     assert_equal 204, response.status
+  end
+
+  test 'images show their file for download, read only' do
+    bundle = create_firmware_bundle(version: '4.2.0')
+    image = bundle.images.first
+    field = manifest_of('firmware_images')['fields'].find { |f| f['name'] == 'file' }
+    assert_equal %w[file true], [field['type'], field['readonly'].to_s]
+    body = call(:get, "/firmware_images/#{image.id}")
+    file = body.dig('data', 'values', 'file')
+    if image.file.attached?
+      assert_equal [image.file.filename.to_s, image.file.byte_size], [file['filename'], file['byte_size']]
+      assert_match %r{/rails/active_storage/blobs/}, file['url']
+    else
+      assert_nil file
+    end
+    other = create_firmware_bundle(version: '4.3.0')
+    ids = ids_of(call(:get, "/firmware_images?filter[firmware_bundle_id]=#{bundle.id}"))
+    assert_equal bundle.images.map(&:id).sort, ids.sort
+    refute_includes ids, other.images.first.id
+  end
+
+  test 'install reports filter by bundle and by date' do
+    bundle = create_firmware_bundle(version: '6.0.0')
+    other = create_firmware_bundle(version: '6.1.0')
+    old = FirmwareReport.create!(bundle: bundle, device_hash: FirmwareTestHelper::DEVICE, result: 'ok')
+    old.update_columns(created_at: 10.days.ago)
+    recent = FirmwareReport.create!(bundle: bundle, device_hash: FirmwareTestHelper::DEVICE, result: 'failed')
+    elsewhere = FirmwareReport.create!(bundle: other, device_hash: FirmwareTestHelper::DEVICE, result: 'ok')
+    filters = manifest_of('firmware_reports')['filters'].index_by { |f| f['name'] }
+    assert_equal %w[date_range reference], [filters['created_at']['type'], filters['firmware_bundle_id']['type']]
+    assert_equal 'firmware_bundles', filters['firmware_bundle_id']['resource']
+
+    assert_equal [recent.id, old.id].sort, ids_of(call(:get, "/firmware_reports?filter[firmware_bundle_id]=#{bundle.id}")).sort
+    from = 2.days.ago.to_date.iso8601
+    ids = ids_of(call(:get, "/firmware_reports?filter[created_at][from]=#{from}&filter[firmware_bundle_id]=#{bundle.id}"))
+    assert_equal [recent.id], ids
+    ids = ids_of(call(:get, "/firmware_reports?filter[created_at][to]=#{3.days.ago.to_date.iso8601}"))
+    assert_equal [old.id], ids
+    refute_includes ids_of(call(:get, "/firmware_reports?filter[firmware_bundle_id]=#{bundle.id}")), elsewhere.id
   end
 
   test 'reports are read only' do
