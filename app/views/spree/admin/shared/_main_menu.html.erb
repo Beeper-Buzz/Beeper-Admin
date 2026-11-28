@@ -46,9 +46,9 @@
     </ul>
   <% end %>
 
-  <% if can? :admin, HomepageSection %>
-    <ul class="nav nav-sidebar border-bottom" id="sidebarHomepage">
-      <%= tab :homepage_sections, icon: 'list.svg', url: admin_homepage_sections_path %>
+  <% if can? :admin, MenuItem %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarMenus">
+      <%= tab :menus, label: 'Menus', icon: 'menu.svg', url: spree.admin_menus_path %>
     </ul>
   <% end %>
 
@@ -58,27 +58,39 @@
     </ul>
   <% end %>
 
-  <% if can? :admin, Contact %>
-    <ul class="nav nav-sidebar border-bottom" id="sidebarContact">
-      <%= tab :contacts, icon: 'contact.svg', url: admin_contacts_path %>
-    </ul>
-  <% end %>
-
-  <% if can? :admin, Message %>
-    <ul class="nav nav-sidebar border-bottom" id="sidebarMessage">
-      <%= tab :messages, icon: 'message.svg', url: admin_messages_path %>
-    </ul>
-  <% end %>
-
   <% if can? :admin, ThreadTable %>
-    <ul class="nav nav-sidebar border-bottom" id="sidebarThreadTable">
-      <%= tab :threads, icon: 'thread.svg', url: admin_threads_path %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarInbox">
+      <%# Built by hand for the unread count, which the inbox page keeps up to date. %>
+      <% unread = admin_inbox_unread_count %>
+      <li class="sidebar-menu-item d-block w-100 position-relative <%= 'selected' if controller_name == 'inbox' %>">
+        <%= link_to spree.admin_inbox_path, class: 'w-100 p-3 d-flex align-items-center icon-link with-tip action-chat.svg' do %>
+          <%= svg_icon name: 'chat.svg', classes: 'mr-2 icon icon-chat.svg', width: 16, height: 16 %>
+          <span class="text">Inbox</span>
+          <span class="badge badge-pill badge-danger inbox-unread-badge <%= 'd-none' if unread.zero? %>" data-inbox-unread-badge>
+            <span data-count><%= unread %></span><span class="sr-only"> unread conversations</span>
+          </span>
+        <% end %>
+      </li>
     </ul>
   <% end %>
 
-  <ul class="nav nav-sidebar border-bottom" id="sidebarPushNotifications">
-    <%= tab :push_notifications, icon: 'message.svg', url: admin_push_notifications_path %>
-  </ul>
+  <% if can? :admin, VisitorSession %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarVisitors">
+      <%= tab :visitors, label: 'Visitors', icon: 'eye-open.svg', url: spree.admin_visitors_path %>
+    </ul>
+  <% end %>
+
+  <% if can? :admin, HomepageSection %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarHomepage">
+      <%= tab :homepage_sections, icon: 'list.svg', url: admin_homepage_sections_path %>
+    </ul>
+  <% end %>
+
+  <% if can? :admin, PushNotification %>
+    <ul class="nav nav-sidebar border-bottom" id="sidebarPushNotifications">
+      <%= tab :push_notifications, icon: 'message.svg', url: admin_push_notifications_path %>
+    </ul>
+  <% end %>
 
   <ul class="nav nav-sidebar border-bottom" id="sidebarAppSettings">
     <%= tab :app_settings, icon: 'settings.svg', url: admin_app_settings_path %>
@@ -87,12 +99,6 @@
   <% if Spree.user_class && can?(:admin, Spree.user_class) %>
     <ul class="nav nav-sidebar border-bottom" id="sidebarUser">
       <%= tab *Spree::BackendConfiguration::USER_TABS, url: spree.admin_users_path, icon: 'users.svg' %>
-    </ul>
-  <% end %>
-
-  <% if Spree.user_class && can?(:admin, Spree.user_class) %>
-    <ul class="nav nav-sidebar border-bottom" id="sidebarUsermenu">
-      <%= tab "Menu Navigator", url: admin_menu_items_path, icon: 'users.svg' %>
     </ul>
   <% end %>
 
