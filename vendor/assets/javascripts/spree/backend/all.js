@@ -11,5 +11,6 @@
 //= require spree/backend/admin_tools
 //= require spree/backend/menu_builder
 //= require spree/backend/inbox
+//= require spree/backend/visitors
 //= require spree/backend/spree_loyalty_points
 // require spree/backend/spree_promo_users_codes
